@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="DSH Plaza">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6e8cff"/><stop offset="1" stop-color="#6e56cf"/></linearGradient></defs>
+  <rect x="12" y="12" width="104" height="104" rx="28" fill="url(#g)"/>
+  <path d="M36 38h23c17 0 29 10 29 26S76 90 59 90H36V38Zm18 14v24h6c8 0 13-4 13-12s-5-12-13-12h-6Z" fill="white"/>
+  <circle cx="94" cy="37" r="8" fill="#b9f5d8"/>
+</svg>
