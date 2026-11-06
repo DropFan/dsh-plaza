@@ -28,5 +28,7 @@ pnpm check
 ## 当前限制
 
 - 当前会话的 Agent 预设没有暴露 `cordis_inspect_list` / `cordis_inspect_query` Tool；契约改由同版本 `0.2.2-rc.1` 本机源码、Inspect catalog 与已发布类型包交叉核对。
-- 脚手架实现列表、组合查询、规则网格/列表和应用内原始 Markdown 详情骨架；安全 Markdown 渲染、详情图片与完整状态/滚动恢复留到下一实现步。
+- 当前已实现列表、组合查询、规则网格/列表、安全 Markdown 子集、详情图片路由，以及每来源查询、已加载数量和滚动位置恢复。
+- Markdown 刻意不支持原始 HTML；复杂 Markdown 语法会安全降级为文本，后续可在不依赖 DSH primitives 的前提下扩充。
 - 未接入安装、收藏、备份、更新或卸载写操作。
+- 尚未安装到真实 DSH Profile，因此真实 Slot、主题、滚动容器和响应式视觉效果仍待授权后的集成验证。
