@@ -165,9 +165,15 @@ var PlazaController = class {
 		this.listeners.clear();
 	}
 	async setIndexes(urls) {
-		if (!(await this.remote.pluginMarket.setIndexes([...urls])).ok || this.disposed) return false;
+		const answer = await this.remote.pluginMarket.setIndexes([...urls]);
+		if (this.disposed) return "error";
+		if (!answer.ok) {
+			if (answer.error.code === "plugin-market/settings-unavailable") return "unavailable";
+			if (answer.error.code === "plugin-market/invalid-index-url") return answer.error.details.reason === "duplicate" ? "duplicate" : "invalid";
+			return "error";
+		}
 		await this.loadIndexes();
-		return true;
+		return "saved";
 	}
 	async loadIndexes() {
 		const read = ++this.indexesRead;
@@ -453,11 +459,27 @@ var plaza_default = ".plaza,.plaza-detail{box-sizing:border-box;width:100%;heigh
 
 //#endregion
 //#region package.json
-var version = "0.1.3";
+var version = "0.1.5";
 
 //#endregion
 //#region src/client/version.ts
 const PLAZA_VERSION = version;
+
+//#endregion
+//#region src/client/sources.ts
+function canonicalIndexUrl(value) {
+	try {
+		const url = new URL(value);
+		if (url.protocol !== "http:" && url.protocol !== "https:" || url.username || url.password || url.hash) return void 0;
+		return url.href;
+	} catch {
+		return;
+	}
+}
+function sourceAlreadyExists(urls, candidate) {
+	const key = canonicalIndexUrl(candidate);
+	return key !== void 0 && urls.some((url) => canonicalIndexUrl(url) === key);
+}
 
 //#endregion
 //#region src/client/Plaza.tsx
@@ -552,7 +574,7 @@ function Plaza({ ctx, controller, t }) {
 	const [selected, setSelected] = (0, react.useState)(null);
 	const [editingSources, setEditingSources] = (0, react.useState)(false);
 	const [sourceDraft, setSourceDraft] = (0, react.useState)("");
-	const [sourceError, setSourceError] = (0, react.useState)(false);
+	const [sourceError, setSourceError] = (0, react.useState)(null);
 	const [savingSource, setSavingSource] = (0, react.useState)(false);
 	const selectedRef = (0, react.useRef)(null);
 	const [detail, setDetail] = (0, react.useState)(null);
@@ -716,14 +738,23 @@ function Plaza({ ctx, controller, t }) {
 		if (count) remember({ loadedCount: count });
 	};
 	const addSource = async () => {
-		const url = sourceDraft.trim();
-		if (!url) return;
+		const draft$1 = sourceDraft.trim();
+		if (!draft$1) return;
+		const url = canonicalIndexUrl(draft$1);
+		if (url === void 0) {
+			setSourceError("invalid");
+			return;
+		}
+		if (sourceAlreadyExists(state.indexes.map((index) => index.url), url)) {
+			setSourceError("duplicate");
+			return;
+		}
 		setSavingSource(true);
-		setSourceError(false);
+		setSourceError(null);
 		const saved = await controller.setIndexes([...state.indexes.map((index) => index.url), url]);
 		setSavingSource(false);
-		if (!saved) {
-			setSourceError(true);
+		if (saved !== "saved") {
+			setSourceError(saved);
 			return;
 		}
 		setSourceDraft("");
@@ -740,10 +771,10 @@ function Plaza({ ctx, controller, t }) {
 	};
 	const removeSource = async (url) => {
 		setSavingSource(true);
-		setSourceError(false);
+		setSourceError(null);
 		const saved = await controller.setIndexes(state.indexes.map((index) => index.url).filter((item) => item !== url));
 		setSavingSource(false);
-		if (!saved) setSourceError(true);
+		if (saved !== "saved") setSourceError(saved);
 	};
 	const metadata = result?.metadata;
 	(0, react.useEffect)(() => {
@@ -889,10 +920,10 @@ function Plaza({ ctx, controller, t }) {
 								children: t("addSource")
 							})]
 						}),
-						sourceError && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+						sourceError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 							className: "plaza-source-error",
 							role: "alert",
-							children: t("sourceError")
+							children: t(sourceError === "duplicate" ? "sourceDuplicate" : sourceError === "invalid" ? "sourceInvalid" : sourceError === "unavailable" ? "sourceUnavailable" : "sourceError")
 						})
 					]
 				}),
@@ -1105,7 +1136,10 @@ const zh = {
 	sourceUrl: "索引 URL",
 	addSource: "添加",
 	removeSource: "移除",
-	sourceError: "无法保存索引来源，请检查 URL 或稍后重试。"
+	sourceDuplicate: "此索引源已经添加。",
+	sourceInvalid: "索引 URL 无效，请使用不含用户名、密码或片段的 HTTP(S) 地址。",
+	sourceUnavailable: "当前 Profile 无法保存索引来源。",
+	sourceError: "无法保存索引来源，请稍后重试。"
 };
 const en = {
 	tab: "Plaza",
@@ -1152,7 +1186,10 @@ const en = {
 	sourceUrl: "Index URL",
 	addSource: "Add",
 	removeSource: "Remove",
-	sourceError: "Could not save the index sources. Check the URL or try again."
+	sourceDuplicate: "This index source is already added.",
+	sourceInvalid: "Use an HTTP(S) index URL without a user name, password, or fragment.",
+	sourceUnavailable: "This profile cannot save index sources.",
+	sourceError: "Could not save the index sources. Try again."
 };
 
 //#endregion

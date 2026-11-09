@@ -45,9 +45,18 @@ describe('PlazaController', () => {
     setIndexes.mockResolvedValue({ ok: true, value: undefined })
     listIndexes.mockResolvedValue({ ok: true, value: [{ url: 'https://example.test/index.json' }] })
 
-    await expect(controller.setIndexes(['https://example.test/index.json'])).resolves.toBe(true)
+    await expect(controller.setIndexes(['https://example.test/index.json'])).resolves.toBe('saved')
     expect(setIndexes).toHaveBeenCalledWith(['https://example.test/index.json'])
     expect(controller.getSnapshot().indexes).toEqual([{ url: 'https://example.test/index.json' }])
+  })
+
+  it('preserves the official duplicate-index failure reason', async () => {
+    const { controller, setIndexes } = setup()
+    setIndexes.mockResolvedValue({
+      ok: false,
+      error: { code: 'plugin-market/invalid-index-url', message: 'duplicate', details: { reason: 'duplicate' } },
+    })
+    await expect(controller.setIndexes(['https://example.test/index.json'])).resolves.toBe('duplicate')
   })
 
   it('discards an older listing response after a newer request wins', async () => {

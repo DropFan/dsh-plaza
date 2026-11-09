@@ -7,7 +7,7 @@ export const zh = {
   detailLoading: '正在读取详细介绍…', detailError: '无法读取详细介绍', detailTimeout: '读取详细介绍超时，请重试。', removeFilter: '移除筛选条件：{name}',
   compatible: '兼容', incompatible: '不兼容', compatibilityExempted: '已设置兼容性豁免', installed: '已安装', update: '有更新', provided: 'DSH 已提供',
   author: '作者', homepage: '项目主页', sourceCode: '源代码', noSources: '尚未配置索引源', manageSources: '管理来源',
-  sourcesTitle: '索引来源', sourcesTrust: '索引由第三方提供。只添加你信任的来源；其中的插件安装后会以你的权限运行。', sourceUrl: '索引 URL', addSource: '添加', removeSource: '移除', sourceError: '无法保存索引来源，请检查 URL 或稍后重试。',
+  sourcesTitle: '索引来源', sourcesTrust: '索引由第三方提供。只添加你信任的来源；其中的插件安装后会以你的权限运行。', sourceUrl: '索引 URL', addSource: '添加', removeSource: '移除', sourceDuplicate: '此索引源已经添加。', sourceInvalid: '索引 URL 无效，请使用不含用户名、密码或片段的 HTTP(S) 地址。', sourceUnavailable: '当前 Profile 无法保存索引来源。', sourceError: '无法保存索引来源，请稍后重试。',
 } as const
 
 export type LocaleKey = keyof typeof zh
@@ -21,5 +21,5 @@ export const en: Record<LocaleKey, string> = {
   detailLoading: 'Loading details…', detailError: 'Could not read the details', detailTimeout: 'Reading the details timed out. Try again.', removeFilter: 'Remove filter: {name}',
   compatible: 'Compatible', incompatible: 'Incompatible', compatibilityExempted: 'Compatibility exemption applied', installed: 'Installed', update: 'Update available', provided: 'Provided by DSH',
   author: 'Author', homepage: 'Homepage', sourceCode: 'Source code', noSources: 'No index sources configured', manageSources: 'Manage sources',
-  sourcesTitle: 'Index sources', sourcesTrust: 'Indexes are provided by third parties. Add only sources you trust; installed plugins run with your permissions.', sourceUrl: 'Index URL', addSource: 'Add', removeSource: 'Remove', sourceError: 'Could not save the index sources. Check the URL or try again.',
+  sourcesTitle: 'Index sources', sourcesTrust: 'Indexes are provided by third parties. Add only sources you trust; installed plugins run with your permissions.', sourceUrl: 'Index URL', addSource: 'Add', removeSource: 'Remove', sourceDuplicate: 'This index source is already added.', sourceInvalid: 'Use an HTTP(S) index URL without a user name, password, or fragment.', sourceUnavailable: 'This profile cannot save index sources.', sourceError: 'Could not save the index sources. Try again.',
 }

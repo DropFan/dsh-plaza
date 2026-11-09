@@ -54,11 +54,18 @@ export class PlazaController {
     this.listeners.clear()
   }
 
-  async setIndexes(urls: readonly string[]): Promise<boolean> {
+  async setIndexes(urls: readonly string[]): Promise<'saved' | 'duplicate' | 'invalid' | 'unavailable' | 'error'> {
     const answer = await this.remote.pluginMarket.setIndexes([...urls])
-    if (!answer.ok || this.disposed) return false
+    if (this.disposed) return 'error'
+    if (!answer.ok) {
+      if (answer.error.code === 'plugin-market/settings-unavailable') return 'unavailable'
+      if (answer.error.code === 'plugin-market/invalid-index-url') {
+        return answer.error.details.reason === 'duplicate' ? 'duplicate' : 'invalid'
+      }
+      return 'error'
+    }
     await this.loadIndexes()
-    return true
+    return 'saved'
   }
 
   async loadIndexes(): Promise<readonly MarketIndexSummary[] | null> {
