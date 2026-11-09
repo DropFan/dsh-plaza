@@ -31,4 +31,6 @@ pnpm check
 - 当前已实现列表、组合查询、规则网格/列表、安全 Markdown 子集、详情图片路由，以及每来源查询、已加载数量和滚动位置恢复。
 - Markdown 刻意不支持原始 HTML；复杂 Markdown 语法会安全降级为文本，后续可在不依赖 DSH primitives 的前提下扩充。
 - 未接入安装、收藏、备份、更新或卸载写操作。
-- 尚未安装到真实 DSH Profile，因此真实 Slot、主题、滚动容器和响应式视觉效果仍待授权后的集成验证。
+- 已在 DSH Desktop `0.2.2-rc.1` Profile 中完成真实集成验证：Slot、Format 1 索引、搜索筛选、规则网格/列表、详情、深浅主题、窄屏、键盘返回和状态恢复均通过。
+- 测试索引使用 dshmarket 文档公开推荐的独立 Format 1 地址 `https://cdn.jsdelivr.net/npm/dsh-plugin-catalog/index.json`；不调用 dshmarket 私有 API，也不读取其状态文件。
+- Plaza Bundle 只声明 UI row；官方实验 Market Bundle 是 `pluginMarket` Host row 的唯一 Owner，避免重复行导致 Settings 无法保存来源。

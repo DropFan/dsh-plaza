@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { PAGE_SIZE, PlazaController } from '../src/client/controller.js'
+import { DETAIL_TIMEOUT_MS, PAGE_SIZE, PlazaController } from '../src/client/controller.js'
 import type { MarketSearchResult, RemoteResult } from '../src/client/contracts.js'
 import { INITIAL_QUERY, type PlazaQuery } from '../src/client/query.js'
 
@@ -30,14 +30,26 @@ function ok(value: MarketSearchResult): RemoteResult<MarketSearchResult> {
 function setup() {
   const listIndexes = vi.fn()
   const search = vi.fn()
+  const setIndexes = vi.fn()
   const readEntryDetail = vi.fn()
-  const controller = new PlazaController({ listIndexes, search, readEntryDetail } as never)
-  return { controller, listIndexes, search, readEntryDetail }
+  const fastest = vi.fn().mockResolvedValue({ ok: true, value: 'https://registry.npmmirror.com/' })
+  const controller = new PlazaController({ pluginMarket: { listIndexes, setIndexes, search, readEntryDetail }, pluginRegistryProbe: { fastest } } as never)
+  return { controller, listIndexes, setIndexes, search, readEntryDetail, fastest }
 }
 
 const otherQuery: PlazaQuery = { ...INITIAL_QUERY, text: 'new' }
 
 describe('PlazaController', () => {
+  it('saves index sources only through the official remote and refreshes the list', async () => {
+    const { controller, listIndexes, setIndexes } = setup()
+    setIndexes.mockResolvedValue({ ok: true, value: undefined })
+    listIndexes.mockResolvedValue({ ok: true, value: [{ url: 'https://example.test/index.json' }] })
+
+    await expect(controller.setIndexes(['https://example.test/index.json'])).resolves.toBe(true)
+    expect(setIndexes).toHaveBeenCalledWith(['https://example.test/index.json'])
+    expect(controller.getSnapshot().indexes).toEqual([{ url: 'https://example.test/index.json' }])
+  })
+
   it('discards an older listing response after a newer request wins', async () => {
     const { controller, search } = setup()
     const oldRead = deferred<RemoteResult<MarketSearchResult>>()
@@ -85,6 +97,26 @@ describe('PlazaController', () => {
     expect(search).toHaveBeenNthCalledWith(3, 'https://example.test/index.json', expect.objectContaining({ offset: 0, limit: 100 }))
     expect(controller.getSnapshot().listing).toMatchObject({ status: 'ready', value: { fetchedAt: 20 } })
     expect(controller.getSnapshot().listing?.value?.entries.map(entry => entry.name)).toEqual(['fresh'])
+  })
+
+  it('prefers npmmirror for npm detail reads when its registry probes fastest', async () => {
+    const { controller, readEntryDetail, fastest } = setup()
+    readEntryDetail.mockResolvedValue({ ok: true, value: { status: 'none' } })
+    await controller.readDetail('https://example.test/index.json', 'plugin', '1.0.0', 'en')
+    expect(fastest).toHaveBeenCalledOnce()
+    expect(readEntryDetail).toHaveBeenCalledWith(
+      'https://example.test/index.json', 'plugin', '1.0.0', 'en', { npmFileSources: ['npmmirror'] },
+    )
+  })
+
+  it('settles a hanging detail read as a retryable timeout', async () => {
+    vi.useFakeTimers()
+    const { controller, readEntryDetail } = setup()
+    readEntryDetail.mockReturnValue(new Promise(() => {}))
+    const reading = controller.readDetail('https://example.test/index.json', 'plugin', '1.0.0', 'en')
+    await vi.advanceTimersByTimeAsync(DETAIL_TIMEOUT_MS)
+    await expect(reading).resolves.toEqual({ status: 'error', failure: 'timeout' })
+    vi.useRealTimers()
   })
 
   it('does not publish a pending result after dispose', async () => {

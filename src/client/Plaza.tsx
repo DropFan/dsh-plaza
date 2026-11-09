@@ -3,12 +3,13 @@ import type { LocalizedText } from '@deepseek-ai/dsh-package-manifest'
 import type { MarketEntry, MarketIndexSummary, PluginDetail, PluginTabProps } from './contracts.js'
 import type { ClientContext } from './contracts.js'
 import { Markdown, safeExternal } from './Markdown.js'
-import { PAGE_SIZE, PlazaController, type DetailState } from './controller.js'
+import { DETAIL_TIMEOUT_MS, PAGE_SIZE, PlazaController, type DetailState } from './controller.js'
 import {
   DEFAULT_PREFERENCES, readPreferences, sourcePreference, updateSourcePreference, writePreferences, type PlazaPreferences,
 } from './persistence.js'
 import { INITIAL_QUERY, activeFilterCount, declaredQuery, toggleLabel, withText, type PlazaQuery, type ViewMode } from './query.js'
 import plazaCss from './plaza.css?inline'
+import { PLAZA_VERSION } from './version.js'
 
 interface PlazaProps extends PluginTabProps {
   readonly ctx: ClientContext
@@ -83,8 +84,13 @@ export function Plaza({ ctx, controller, t }: PlazaProps) {
   const [draft, setDraft] = useState('')
   const [view, setViewState] = useState<ViewMode>(preferences.view)
   const [selected, setSelected] = useState<MarketEntry | null>(null)
+  const [editingSources, setEditingSources] = useState(false)
+  const [sourceDraft, setSourceDraft] = useState('')
+  const [sourceError, setSourceError] = useState(false)
+  const [savingSource, setSavingSource] = useState(false)
   const selectedRef = useRef<MarketEntry | null>(null)
   const [detail, setDetail] = useState<DetailState | null>(null)
+  const [detailRequest, setDetailRequest] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
   const scrollPosition = useRef(0)
   const returnFocus = useRef<HTMLElement | null>(null)
@@ -133,6 +139,15 @@ export function Plaza({ ctx, controller, t }: PlazaProps) {
     document.addEventListener('keydown', listener)
     return () => document.removeEventListener('keydown', listener)
   }, [selected])
+  useEffect(() => {
+    if (detail?.status !== 'loading') return
+    const request = detailRequest
+    const timer = window.setTimeout(() => {
+      setDetail(current => current?.status === 'loading' && request === detailRequest
+        ? { status: 'error', failure: 'timeout' } : current)
+    }, DETAIL_TIMEOUT_MS)
+    return () => window.clearTimeout(timer)
+  }, [detail?.status, detailRequest])
 
   const save = (next: PlazaPreferences) => { preferencesRef.current = next; setPreferences(next); writePreferences(localStorage, next) }
   const remember = (patch: Parameters<typeof updateSourcePreference>[2]) => { if (source) save(updateSourcePreference(preferencesRef.current, source, patch)) }
@@ -148,6 +163,7 @@ export function Plaza({ ctx, controller, t }: PlazaProps) {
   }
   const setView = (next: ViewMode) => { setViewState(next); save({ ...preferencesRef.current, view: next }) }
   const readDetail = async (entry: MarketEntry) => {
+    setDetailRequest(value => value + 1)
     setDetail({ status: 'loading' })
     const version = presented(entry)
     const answer = await controller.readDetail(sourceRef.current, entry.name, version.version, language)
@@ -162,6 +178,24 @@ export function Plaza({ ctx, controller, t }: PlazaProps) {
     requestAnimationFrame(() => { returnFocus.current?.focus(); const top = sourcePreference(preferencesRef.current, source).scrollY; scrollRef.current?.scrollTo({ top }) })
   }
   const showMore = async () => { await controller.more(); const count = controller.getSnapshot().listing?.value?.entries.length; if (count) remember({ loadedCount: count }) }
+  const addSource = async () => {
+    const url = sourceDraft.trim()
+    if (!url) return
+    setSavingSource(true); setSourceError(false)
+    const saved = await controller.setIndexes([...state.indexes.map(index => index.url), url])
+    setSavingSource(false)
+    if (!saved) { setSourceError(true); return }
+    setSourceDraft(''); setEditingSources(false); setSource(url)
+    const next = sourcePreference(preferencesRef.current, url)
+    setQuery(next.query); setDraft(next.query.text); save({ ...preferencesRef.current, selectedSource: url })
+    void controller.load(url, next.query, next.loadedCount)
+  }
+  const removeSource = async (url: string) => {
+    setSavingSource(true); setSourceError(false)
+    const saved = await controller.setIndexes(state.indexes.map(index => index.url).filter(item => item !== url))
+    setSavingSource(false)
+    if (!saved) setSourceError(true)
+  }
 
   const metadata = result?.metadata
   useEffect(() => {
@@ -182,7 +216,7 @@ export function Plaza({ ctx, controller, t }: PlazaProps) {
       <header><PluginIcon entry={selected} /><div><h2 id="plaza-detail-title">{resolve(ctx, selected.title, selected.name)}</h2><p>{selected.name} · {version.version}</p></div></header>
       <p>{resolve(ctx, selected.description, '')}</p>
       {!version.compatibility.compatible && <p className="plaza-notice" role="note">{version.compatibility.exempted ? t('compatibilityExempted') : t('incompatible')}</p>}
-      <div className="plaza-detail-body">{detail?.status === 'loading' || detail === null ? t('detailLoading') : detail.status === 'error' ? <><p>{t('detailError')}</p><button onClick={() => void readDetail(selected)}>{t('retry')}</button></> : doc === undefined ? t('noDetail') : <Markdown source={doc.markdown} resolveImage={path => detailImage(doc.document, path)} />}</div>
+      <div className="plaza-detail-body">{detail?.status === 'loading' || detail === null ? t('detailLoading') : detail.status === 'error' ? <><p>{t(detail.failure === 'timeout' ? 'detailTimeout' : 'detailError')}</p><button onClick={() => void readDetail(selected)}>{t('retry')}</button></> : doc === undefined ? t('noDetail') : <Markdown source={doc.markdown} resolveImage={path => detailImage(doc.document, path)} />}</div>
       <dl className="plaza-facts">
         {selected.author && <div><dt>{t('author')}</dt><dd>{selected.author}</dd></div>}
         {selected.homepage && safeExternal(selected.homepage) && <div><dt>{t('homepage')}</dt><dd><a href={safeExternal(selected.homepage)} target="_blank" rel="noopener noreferrer">{selected.homepage} ↗</a></dd></div>}
@@ -192,7 +226,8 @@ export function Plaza({ ctx, controller, t }: PlazaProps) {
   }
 
   return <section className="plaza" aria-labelledby="plaza-title"><div className="plaza-scroll" ref={scrollRef} onScroll={event => { scrollPosition.current = event.currentTarget.scrollTop }} onPointerUp={rememberScroll} onKeyUp={rememberScroll}>
-    <header className="plaza-heading"><div><h2 id="plaza-title">{t('title')}</h2><p>{t('subtitle')}</p></div><select aria-label={t('source')} value={source} onChange={event => chooseSource(event.target.value)}>{state.indexes.map((index: MarketIndexSummary) => <option value={index.url} key={index.url}>{resolve(ctx, index.title, index.url)}</option>)}</select></header>
+    <header className="plaza-heading"><div><h2 id="plaza-title">{t('title')} <span className="plaza-version">Beta {PLAZA_VERSION}</span></h2><p>{t('subtitle')}</p></div><div className="plaza-source-controls"><select aria-label={t('source')} value={source} disabled={state.indexes.length === 0} onChange={event => chooseSource(event.target.value)}>{state.indexes.length === 0 && <option value="">{t('noSources')}</option>}{state.indexes.map((index: MarketIndexSummary) => <option value={index.url} key={index.url}>{resolve(ctx, index.title, index.url)}</option>)}</select><button type="button" onClick={() => setEditingSources(value => !value)}>{t('manageSources')}</button></div></header>
+    {editingSources && <section className="plaza-sources" aria-labelledby="plaza-sources-title"><h3 id="plaza-sources-title">{t('sourcesTitle')}</h3><p>{t('sourcesTrust')}</p><ul>{state.indexes.map(index => <li key={index.url}><span>{index.url}</span><button type="button" disabled={savingSource} onClick={() => void removeSource(index.url)}>{t('removeSource')}</button></li>)}</ul><div className="plaza-source-add"><input type="url" value={sourceDraft} onChange={event => setSourceDraft(event.target.value)} placeholder="https://example.com/index.json" aria-label={t('sourceUrl')} /><button type="button" disabled={savingSource || sourceDraft.trim() === ''} onClick={() => void addSource()}>{t('addSource')}</button></div>{sourceError && <p className="plaza-source-error" role="alert">{t('sourceError')}</p>}</section>}
     <div className="plaza-toolbar">
       <input type="search" value={draft} onChange={event => setDraft(event.target.value)} placeholder={t('search')} aria-label={t('search')} />
       <select aria-label={t('allCategories')} value={query.category} onChange={event => applyQuery({ ...query, category: event.target.value })}><option value="">{t('allCategories')}</option>{categories.map(([id, item]) => <option key={id} value={id}>{resolve(ctx, item.title, id)}</option>)}</select>

@@ -12,11 +12,11 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 const NS = 'dshPlaza'
 
-export const inject = ['slots', 'locale', 'remote', 'remote.pluginMarket']
+export const inject = ['slots', 'locale', 'remote', 'remote.pluginMarket', 'remote.pluginRegistryProbe']
 
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-plaza: locale')
-  const controller = new PlazaController(ctx.remote.pluginMarket)
+  const controller = new PlazaController(ctx.remote)
   ctx.effect(() => () => controller.dispose(), 'dsh-plaza: controller')
   const t = ctx.locale.bind(NS)
   ctx.slots.inject('plugins.tab', () => ctx.slots.register({

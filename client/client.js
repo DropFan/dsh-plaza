@@ -134,6 +134,7 @@ function Markdown({ source, resolveImage }) {
 //#region src/client/controller.ts
 const PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
+const DETAIL_TIMEOUT_MS = 7e4;
 const INITIAL = {
 	indexes: [],
 	indexesStatus: "idle",
@@ -163,10 +164,15 @@ var PlazaController = class {
 		this.detailRead++;
 		this.listeners.clear();
 	}
+	async setIndexes(urls) {
+		if (!(await this.remote.pluginMarket.setIndexes([...urls])).ok || this.disposed) return false;
+		await this.loadIndexes();
+		return true;
+	}
 	async loadIndexes() {
 		const read = ++this.indexesRead;
 		this.patch({ indexesStatus: "loading" });
-		const answer = await this.remote.listIndexes();
+		const answer = await this.remote.pluginMarket.listIndexes();
 		if (!this.current(read, this.indexesRead)) return null;
 		if (!answer.ok) {
 			this.patch({ indexesStatus: "error" });
@@ -264,14 +270,30 @@ var PlazaController = class {
 			answeredQuery: query
 		} });
 	}
-	async readDetail(url, name, version, language) {
+	async readDetail(url, name, version$1, language) {
 		const read = ++this.detailRead;
-		const answer = await this.remote.readEntryDetail(url, name, version, language);
+		let timer;
+		const timeout = new Promise((resolve$1) => {
+			timer = setTimeout(() => resolve$1("timeout"), DETAIL_TIMEOUT_MS);
+		});
+		let npmFileSources = [];
+		const fastest = await this.remote.pluginRegistryProbe.fastest();
 		if (!this.current(read, this.detailRead)) return null;
+		if (fastest.ok && fastest.value === "https://registry.npmmirror.com/") npmFileSources = ["npmmirror"];
+		const answer = await Promise.race([this.remote.pluginMarket.readEntryDetail(url, name, version$1, language, { npmFileSources }), timeout]);
+		if (timer !== void 0) clearTimeout(timer);
+		if (!this.current(read, this.detailRead)) return null;
+		if (answer === "timeout") return {
+			status: "error",
+			failure: "timeout"
+		};
 		return answer.ok ? {
 			status: "ready",
 			detail: answer.value
-		} : { status: "error" };
+		} : {
+			status: "error",
+			failure: "remote"
+		};
 	}
 	invalidateDetails() {
 		this.detailRead++;
@@ -287,7 +309,7 @@ var PlazaController = class {
 		if (indexes !== null && listing !== null && indexes.some((index) => index.url === listing.url)) await this.load(listing.url, listing.query, Math.max(PAGE_SIZE, listing.value?.entries.length ?? PAGE_SIZE));
 	}
 	page(url, query, offset, limit, fetchedAt, refresh = false) {
-		return this.remote.search(url, {
+		return this.remote.pluginMarket.search(url, {
 			...query.text.trim() ? { text: query.text.trim() } : {},
 			...query.category ? { category: query.category } : {},
 			...query.labels.length ? { labels: query.labels } : {},
@@ -427,7 +449,15 @@ function updateSourcePreference(preferences, url, patch) {
 
 //#endregion
 //#region src/client/plaza.css?dsh-inline
-var plaza_default = ".plaza,.plaza-detail{box-sizing:border-box;width:100%;height:100%;min-height:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1)}.plaza-scroll{box-sizing:border-box;scrollbar-gutter:stable;height:100%;padding:24px clamp(16px,3vw,36px) 40px;overflow:auto}.plaza-heading,.plaza-toolbar,.plaza-card footer,.plaza-detail header{align-items:center;display:flex}.plaza-heading{justify-content:space-between;gap:16px;margin-bottom:20px}.plaza-heading h2,.plaza-detail h2{margin:0;font-size:24px}.plaza-heading p,.plaza-detail header p{color:var(--dsw-alias-label-secondary);margin:4px 0 0}.plaza select,.plaza input,.plaza button,.plaza-detail button{font:inherit;color:inherit}.plaza select,.plaza input{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);border-radius:10px;height:36px;padding:0 12px}.plaza-toolbar{flex-wrap:wrap;gap:8px}.plaza-toolbar input{flex:240px}.plaza-toolbar select{flex:0 180px}.plaza-view{border:.5px solid var(--dsw-alias-border-l3);border-radius:10px;display:flex;overflow:hidden}.plaza-view button{background:0 0;border:0;width:36px;height:34px}.plaza-view button[aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover)}.plaza-labels{border:0;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;display:flex}.plaza-labels legend{float:left;color:var(--dsw-alias-label-secondary);margin-right:8px}.plaza-labels label{font-size:13px}.plaza-chips{flex-wrap:wrap;gap:6px;margin-top:12px;display:flex}.plaza-chips button,.plaza-more,.plaza-state button,.plaza-back,.plaza-detail-body button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:999px;padding:5px 10px}.plaza-result-meta{min-height:20px;color:var(--dsw-alias-label-secondary);margin:18px 0 10px;font-size:13px}.plaza-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));grid-auto-rows:1fr;gap:12px;display:grid}.plaza-list{grid-template-columns:1fr;gap:8px;display:grid}.plaza-card{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:14px;flex-direction:column;min-width:0;min-height:230px;display:flex;overflow:hidden}.plaza-list .plaza-card{min-height:0}.plaza-card-main{text-align:left;cursor:pointer;background:0 0;border:0;flex:1;gap:12px;width:100%;padding:16px;display:flex}.plaza-icon{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);width:42px;height:42px;color:var(--dsw-alias-link);border-radius:11px;flex:0 0 42px;place-items:center;font-weight:700;display:grid;overflow:hidden}.plaza-icon img{object-fit:contain;width:36px;height:36px;display:block}.plaza-card-copy{flex-direction:column;min-width:0;display:flex}.plaza-package{color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;font-size:12px;overflow:hidden}.plaza-description{color:var(--dsw-alias-label-secondary);-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-top:10px;font-size:13px;line-height:19px;display:-webkit-box;overflow:hidden}.plaza-meta{color:var(--dsw-alias-label-tertiary);margin-top:8px;font-size:12px}.plaza-card-tags{gap:5px;min-height:24px;padding:0 16px;display:flex}.plaza-card-tags span{background:var(--dsw-alias-interactive-bg-hover);border-radius:5px;padding:2px 6px;font-size:11px}.plaza-card footer{border-top:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);justify-content:space-between;margin-top:10px;padding:10px 16px;font-size:12px}.plaza-more{margin:18px auto;display:block}.plaza-state{min-height:220px;color:var(--dsw-alias-label-secondary);place-items:center;gap:12px;display:grid}.plaza-detail{padding:24px clamp(16px,4vw,48px);overflow:auto}.plaza-detail header{gap:14px;margin:24px 0}.plaza-detail-body{border-top:.5px solid var(--dsw-alias-border-l3);max-width:900px;margin-top:20px;padding-top:20px}.plaza-back{border-radius:8px}.plaza-notice{border:.5px solid var(--dsw-alias-state-warn-primary);max-width:900px;color:var(--dsw-alias-state-warn-primary);border-radius:8px;padding:10px}.plaza-markdown{overflow-wrap:anywhere;line-height:1.65}.plaza-markdown img{border-radius:8px;max-width:100%;height:auto;margin:12px 0;display:block}.plaza-markdown pre{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:8px;padding:12px;overflow:auto}.plaza-markdown code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.plaza-markdown a,.plaza-facts a{color:var(--dsw-alias-link)}.plaza-facts{gap:10px;max-width:900px;margin-top:28px;display:grid}.plaza-facts div{grid-template-columns:minmax(100px,160px) 1fr;gap:12px;display:grid}.plaza-facts dt{color:var(--dsw-alias-label-secondary)}.plaza-facts dd{overflow-wrap:anywhere;margin:0}.plaza button:focus-visible,.plaza input:focus-visible,.plaza select:focus-visible,.plaza-detail button:focus-visible,.plaza-detail a:focus-visible{outline:2px solid var(--dsw-alias-link);outline-offset:2px}@media (hover:hover){.plaza-card-main:hover,.plaza-chips button:hover,.plaza-more:hover,.plaza-back:hover{background:var(--dsw-alias-interactive-bg-hover)}}@media (width<=640px){.plaza-scroll,.plaza-detail{padding:16px 12px 32px}.plaza-heading{flex-direction:column;align-items:stretch}.plaza-toolbar>*{flex:100%!important}.plaza-grid{grid-template-columns:1fr}.plaza-card{min-height:210px}.plaza-facts div{grid-template-columns:1fr;gap:2px}}@media (prefers-reduced-motion:reduce){.plaza *{scroll-behavior:auto!important}}";
+var plaza_default = ".plaza,.plaza-detail{box-sizing:border-box;width:100%;height:100%;min-height:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1)}.plaza-scroll{box-sizing:border-box;scrollbar-gutter:stable;height:100%;padding:24px clamp(16px,3vw,36px) 40px;overflow:auto}.plaza-heading,.plaza-toolbar,.plaza-card footer,.plaza-detail header{align-items:center;display:flex}.plaza-heading{justify-content:space-between;gap:16px;margin-bottom:20px}.plaza-heading h2,.plaza-detail h2{margin:0;font-size:24px}.plaza-version{vertical-align:middle;border:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);border-radius:999px;padding:2px 7px;font-size:11px;font-weight:400}.plaza-heading p,.plaza-detail header p{color:var(--dsw-alias-label-secondary);margin:4px 0 0}.plaza select,.plaza input,.plaza button,.plaza-detail button{font:inherit;color:inherit}.plaza select,.plaza input{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);border-radius:10px;height:36px;padding:0 12px}.plaza-source-controls{align-items:center;gap:8px;display:flex}.plaza-source-controls button,.plaza-sources button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:8px;height:36px;padding:0 12px}.plaza-sources{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:12px;margin-bottom:16px;padding:14px}.plaza-sources h3{margin:0}.plaza-sources p{color:var(--dsw-alias-label-secondary);margin:6px 0 12px;font-size:13px}.plaza-sources ul{gap:6px;margin:0 0 10px;padding:0;list-style:none;display:grid}.plaza-sources li{justify-content:space-between;align-items:center;gap:8px;display:flex}.plaza-sources li span{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.plaza-source-add{gap:8px;display:flex}.plaza-source-add input{flex:1}.plaza-sources .plaza-source-error{color:var(--dsw-alias-state-error-primary)}.plaza-toolbar{flex-wrap:wrap;gap:8px}.plaza-toolbar input{flex:240px}.plaza-toolbar select{flex:0 180px}.plaza-view{border:.5px solid var(--dsw-alias-border-l3);border-radius:10px;display:flex;overflow:hidden}.plaza-view button{background:0 0;border:0;width:36px;height:34px}.plaza-view button[aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover)}.plaza-labels{border:0;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;display:flex}.plaza-labels legend{float:left;color:var(--dsw-alias-label-secondary);margin-right:8px}.plaza-labels label{font-size:13px}.plaza-chips{flex-wrap:wrap;gap:6px;margin-top:12px;display:flex}.plaza-chips button,.plaza-more,.plaza-state button,.plaza-back,.plaza-detail-body button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:999px;padding:5px 10px}.plaza-result-meta{min-height:20px;color:var(--dsw-alias-label-secondary);margin:18px 0 10px;font-size:13px}.plaza-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));grid-auto-rows:1fr;gap:12px;display:grid}.plaza-list{grid-template-columns:1fr;gap:8px;display:grid}.plaza-card{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:14px;flex-direction:column;min-width:0;min-height:230px;display:flex;overflow:hidden}.plaza-list .plaza-card{min-height:0}.plaza-card-main{text-align:left;cursor:pointer;background:0 0;border:0;flex:1;gap:12px;width:100%;padding:16px;display:flex}.plaza-icon{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);width:42px;height:42px;color:var(--dsw-alias-link);border-radius:11px;flex:0 0 42px;place-items:center;font-weight:700;display:grid;overflow:hidden}.plaza-icon img{object-fit:contain;width:36px;height:36px;display:block}.plaza-card-copy{flex-direction:column;min-width:0;display:flex}.plaza-package{color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;font-size:12px;overflow:hidden}.plaza-description{color:var(--dsw-alias-label-secondary);-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-top:10px;font-size:13px;line-height:19px;display:-webkit-box;overflow:hidden}.plaza-meta{color:var(--dsw-alias-label-tertiary);margin-top:8px;font-size:12px}.plaza-card-tags{gap:5px;min-height:24px;padding:0 16px;display:flex}.plaza-card-tags span{background:var(--dsw-alias-interactive-bg-hover);border-radius:5px;padding:2px 6px;font-size:11px}.plaza-card footer{border-top:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);justify-content:space-between;margin-top:10px;padding:10px 16px;font-size:12px}.plaza-more{margin:18px auto;display:block}.plaza-state{min-height:220px;color:var(--dsw-alias-label-secondary);place-items:center;gap:12px;display:grid}.plaza-detail{padding:24px clamp(16px,4vw,48px);overflow:auto}.plaza-detail header{gap:14px;margin:24px 0}.plaza-detail-body{border-top:.5px solid var(--dsw-alias-border-l3);max-width:900px;margin-top:20px;padding-top:20px}.plaza-back{border-radius:8px}.plaza-notice{border:.5px solid var(--dsw-alias-state-warn-primary);max-width:900px;color:var(--dsw-alias-state-warn-primary);border-radius:8px;padding:10px}.plaza-markdown{overflow-wrap:anywhere;line-height:1.65}.plaza-markdown img{border-radius:8px;max-width:100%;height:auto;margin:12px 0;display:block}.plaza-markdown pre{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:8px;padding:12px;overflow:auto}.plaza-markdown code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.plaza-markdown a,.plaza-facts a{color:var(--dsw-alias-link)}.plaza-facts{gap:10px;max-width:900px;margin-top:28px;display:grid}.plaza-facts div{grid-template-columns:minmax(100px,160px) 1fr;gap:12px;display:grid}.plaza-facts dt{color:var(--dsw-alias-label-secondary)}.plaza-facts dd{overflow-wrap:anywhere;margin:0}.plaza button:focus-visible,.plaza input:focus-visible,.plaza select:focus-visible,.plaza-detail button:focus-visible,.plaza-detail a:focus-visible{outline:2px solid var(--dsw-alias-link);outline-offset:2px}@media (hover:hover){.plaza-card-main:hover,.plaza-chips button:hover,.plaza-more:hover,.plaza-back:hover{background:var(--dsw-alias-interactive-bg-hover)}}@media (width<=640px){.plaza-scroll,.plaza-detail{padding:16px 12px 32px}.plaza-heading,.plaza-source-controls,.plaza-source-add{flex-direction:column;align-items:stretch}.plaza-source-controls>*{width:100%}.plaza-sources li{flex-direction:column;align-items:stretch}.plaza-toolbar>*{flex:100%!important}.plaza-grid{grid-template-columns:1fr}.plaza-card{min-height:210px}.plaza-facts div{grid-template-columns:1fr;gap:2px}}@media (prefers-reduced-motion:reduce){.plaza *{scroll-behavior:auto!important}}";
+
+//#endregion
+//#region package.json
+var version = "0.1.3";
+
+//#endregion
+//#region src/client/version.ts
+const PLAZA_VERSION = version;
 
 //#endregion
 //#region src/client/Plaza.tsx
@@ -455,7 +485,7 @@ function PluginIcon({ entry }) {
 	});
 }
 function Card({ entry, onOpen, ctx, t, language, labels, category }) {
-	const version = presented(entry);
+	const version$1 = presented(entry);
 	const shownLabels = entry.metadata.labels.slice(0, 2);
 	const status = entry.installation.status;
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("article", {
@@ -481,7 +511,7 @@ function Card({ entry, onOpen, ctx, t, language, labels, category }) {
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 							className: "plaza-meta",
-							children: [entry.author ? `${entry.author} · ` : "", formatDate(version.publishTimestamp, language)]
+							children: [entry.author ? `${entry.author} · ` : "", formatDate(version$1.publishTimestamp, language)]
 						})
 					]
 				})]
@@ -494,7 +524,7 @@ function Card({ entry, onOpen, ctx, t, language, labels, category }) {
 					entry.metadata.labels.length > shownLabels.length && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: ["+", entry.metadata.labels.length - shownLabels.length] })
 				]
 			}),
-			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("footer", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: version.compatibility.compatible ? t("compatible") : version.compatibility.exempted ? t("compatibilityExempted") : t("incompatible") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: status === "update-available" ? t("update") : status === "provided" ? t("provided") : status === "installed" || status === "different-version" ? t("installed") : version.version })] })
+			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("footer", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: version$1.compatibility.compatible ? t("compatible") : version$1.compatibility.exempted ? t("compatibilityExempted") : t("incompatible") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: status === "update-available" ? t("update") : status === "provided" ? t("provided") : status === "installed" || status === "different-version" ? t("installed") : version$1.version })] })
 		]
 	});
 }
@@ -520,8 +550,13 @@ function Plaza({ ctx, controller, t }) {
 	const [draft, setDraft] = (0, react.useState)("");
 	const [view, setViewState] = (0, react.useState)(preferences.view);
 	const [selected, setSelected] = (0, react.useState)(null);
+	const [editingSources, setEditingSources] = (0, react.useState)(false);
+	const [sourceDraft, setSourceDraft] = (0, react.useState)("");
+	const [sourceError, setSourceError] = (0, react.useState)(false);
+	const [savingSource, setSavingSource] = (0, react.useState)(false);
 	const selectedRef = (0, react.useRef)(null);
 	const [detail, setDetail] = (0, react.useState)(null);
+	const [detailRequest, setDetailRequest] = (0, react.useState)(0);
 	const scrollRef = (0, react.useRef)(null);
 	const scrollPosition = (0, react.useRef)(0);
 	const returnFocus = (0, react.useRef)(null);
@@ -597,6 +632,17 @@ function Plaza({ ctx, controller, t }) {
 		document.addEventListener("keydown", listener);
 		return () => document.removeEventListener("keydown", listener);
 	}, [selected]);
+	(0, react.useEffect)(() => {
+		if (detail?.status !== "loading") return;
+		const request = detailRequest;
+		const timer = window.setTimeout(() => {
+			setDetail((current) => current?.status === "loading" && request === detailRequest ? {
+				status: "error",
+				failure: "timeout"
+			} : current);
+		}, DETAIL_TIMEOUT_MS);
+		return () => window.clearTimeout(timer);
+	}, [detail?.status, detailRequest]);
 	const save = (next) => {
 		preferencesRef.current = next;
 		setPreferences(next);
@@ -640,9 +686,10 @@ function Plaza({ ctx, controller, t }) {
 		});
 	};
 	const readDetail = async (entry) => {
+		setDetailRequest((value) => value + 1);
 		setDetail({ status: "loading" });
-		const version = presented(entry);
-		const answer = await controller.readDetail(sourceRef.current, entry.name, version.version, language);
+		const version$1 = presented(entry);
+		const answer = await controller.readDetail(sourceRef.current, entry.name, version$1.version, language);
 		if (answer !== null) setDetail(answer);
 	};
 	const openDetail = async (entry, target) => {
@@ -668,6 +715,36 @@ function Plaza({ ctx, controller, t }) {
 		const count = controller.getSnapshot().listing?.value?.entries.length;
 		if (count) remember({ loadedCount: count });
 	};
+	const addSource = async () => {
+		const url = sourceDraft.trim();
+		if (!url) return;
+		setSavingSource(true);
+		setSourceError(false);
+		const saved = await controller.setIndexes([...state.indexes.map((index) => index.url), url]);
+		setSavingSource(false);
+		if (!saved) {
+			setSourceError(true);
+			return;
+		}
+		setSourceDraft("");
+		setEditingSources(false);
+		setSource(url);
+		const next = sourcePreference(preferencesRef.current, url);
+		setQuery(next.query);
+		setDraft(next.query.text);
+		save({
+			...preferencesRef.current,
+			selectedSource: url
+		});
+		controller.load(url, next.query, next.loadedCount);
+	};
+	const removeSource = async (url) => {
+		setSavingSource(true);
+		setSourceError(false);
+		const saved = await controller.setIndexes(state.indexes.map((index) => index.url).filter((item) => item !== url));
+		setSavingSource(false);
+		if (!saved) setSourceError(true);
+	};
 	const metadata = result?.metadata;
 	(0, react.useEffect)(() => {
 		if (!metadata) return;
@@ -679,7 +756,7 @@ function Plaza({ ctx, controller, t }) {
 	const sortKeys = Object.entries(metadata?.sortKeys ?? {});
 	const chips = [query.category, ...query.labels].filter(Boolean);
 	if (selected !== null) {
-		const version = presented(selected);
+		const version$1 = presented(selected);
 		const doc = detail?.status === "ready" && detail.detail.status === "found" ? detail.detail : void 0;
 		return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
 			className: "plaza-detail",
@@ -698,17 +775,17 @@ function Plaza({ ctx, controller, t }) {
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
 					selected.name,
 					" · ",
-					version.version
+					version$1.version
 				] })] })] }),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: resolve(ctx, selected.description, "") }),
-				!version.compatibility.compatible && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+				!version$1.compatibility.compatible && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 					className: "plaza-notice",
 					role: "note",
-					children: version.compatibility.exempted ? t("compatibilityExempted") : t("incompatible")
+					children: version$1.compatibility.exempted ? t("compatibilityExempted") : t("incompatible")
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: "plaza-detail-body",
-					children: detail?.status === "loading" || detail === null ? t("detailLoading") : detail.status === "error" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("detailError") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+					children: detail?.status === "loading" || detail === null ? t("detailLoading") : detail.status === "error" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t(detail.failure === "timeout" ? "detailTimeout" : "detailError") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						onClick: () => void readDetail(selected),
 						children: t("retry")
 					})] }) : doc === void 0 ? t("noDetail") : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Markdown, {
@@ -751,18 +828,73 @@ function Plaza({ ctx, controller, t }) {
 			children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", {
 					className: "plaza-heading",
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h2", {
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("h2", {
 						id: "plaza-title",
-						children: t("title")
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("subtitle") })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
-						"aria-label": t("source"),
-						value: source,
-						onChange: (event) => chooseSource(event.target.value),
-						children: state.indexes.map((index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-							value: index.url,
-							children: resolve(ctx, index.title, index.url)
-						}, index.url))
+						children: [
+							t("title"),
+							" ",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: "plaza-version",
+								children: ["Beta ", PLAZA_VERSION]
+							})
+						]
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("subtitle") })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "plaza-source-controls",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+							"aria-label": t("source"),
+							value: source,
+							disabled: state.indexes.length === 0,
+							onChange: (event) => chooseSource(event.target.value),
+							children: [state.indexes.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+								value: "",
+								children: t("noSources")
+							}), state.indexes.map((index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+								value: index.url,
+								children: resolve(ctx, index.title, index.url)
+							}, index.url))]
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							onClick: () => setEditingSources((value) => !value),
+							children: t("manageSources")
+						})]
 					})]
+				}),
+				editingSources && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+					className: "plaza-sources",
+					"aria-labelledby": "plaza-sources-title",
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
+							id: "plaza-sources-title",
+							children: t("sourcesTitle")
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("sourcesTrust") }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", { children: state.indexes.map((index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: index.url }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							disabled: savingSource,
+							onClick: () => void removeSource(index.url),
+							children: t("removeSource")
+						})] }, index.url)) }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: "plaza-source-add",
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+								type: "url",
+								value: sourceDraft,
+								onChange: (event) => setSourceDraft(event.target.value),
+								placeholder: "https://example.com/index.json",
+								"aria-label": t("sourceUrl")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								disabled: savingSource || sourceDraft.trim() === "",
+								onClick: () => void addSource(),
+								children: t("addSource")
+							})]
+						}),
+						sourceError && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+							className: "plaza-source-error",
+							role: "alert",
+							children: t("sourceError")
+						})
+					]
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "plaza-toolbar",
@@ -955,6 +1087,7 @@ const zh = {
 	source: "索引源",
 	detailLoading: "正在读取详细介绍…",
 	detailError: "无法读取详细介绍",
+	detailTimeout: "读取详细介绍超时，请重试。",
 	removeFilter: "移除筛选条件：{name}",
 	compatible: "兼容",
 	incompatible: "不兼容",
@@ -964,7 +1097,15 @@ const zh = {
 	provided: "DSH 已提供",
 	author: "作者",
 	homepage: "项目主页",
-	sourceCode: "源代码"
+	sourceCode: "源代码",
+	noSources: "尚未配置索引源",
+	manageSources: "管理来源",
+	sourcesTitle: "索引来源",
+	sourcesTrust: "索引由第三方提供。只添加你信任的来源；其中的插件安装后会以你的权限运行。",
+	sourceUrl: "索引 URL",
+	addSource: "添加",
+	removeSource: "移除",
+	sourceError: "无法保存索引来源，请检查 URL 或稍后重试。"
 };
 const en = {
 	tab: "Plaza",
@@ -993,6 +1134,7 @@ const en = {
 	source: "Index source",
 	detailLoading: "Loading details…",
 	detailError: "Could not read the details",
+	detailTimeout: "Reading the details timed out. Try again.",
 	removeFilter: "Remove filter: {name}",
 	compatible: "Compatible",
 	incompatible: "Incompatible",
@@ -1002,7 +1144,15 @@ const en = {
 	provided: "Provided by DSH",
 	author: "Author",
 	homepage: "Homepage",
-	sourceCode: "Source code"
+	sourceCode: "Source code",
+	noSources: "No index sources configured",
+	manageSources: "Manage sources",
+	sourcesTitle: "Index sources",
+	sourcesTrust: "Indexes are provided by third parties. Add only sources you trust; installed plugins run with your permissions.",
+	sourceUrl: "Index URL",
+	addSource: "Add",
+	removeSource: "Remove",
+	sourceError: "Could not save the index sources. Check the URL or try again."
 };
 
 //#endregion
@@ -1012,14 +1162,15 @@ const inject = [
 	"slots",
 	"locale",
 	"remote",
-	"remote.pluginMarket"
+	"remote.pluginMarket",
+	"remote.pluginRegistryProbe"
 ];
 function apply(ctx) {
 	ctx.effect(() => ctx.locale.register(NS, {
 		zh,
 		en
 	}), "dsh-plaza: locale");
-	const controller = new PlazaController(ctx.remote.pluginMarket);
+	const controller = new PlazaController(ctx.remote);
 	ctx.effect(() => () => controller.dispose(), "dsh-plaza: controller");
 	const t = ctx.locale.bind(NS);
 	ctx.slots.inject("plugins.tab", () => ctx.slots.register({

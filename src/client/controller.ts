@@ -23,7 +23,9 @@ export interface PlazaState {
 export type DetailState =
   | { readonly status: 'loading' }
   | { readonly status: 'ready'; readonly detail: PluginDetail }
-  | { readonly status: 'error' }
+  | { readonly status: 'error'; readonly failure: 'remote' | 'timeout' }
+
+export const DETAIL_TIMEOUT_MS = 70_000
 
 const INITIAL: PlazaState = { indexes: [], indexesStatus: 'idle', listing: null }
 
@@ -35,7 +37,7 @@ export class PlazaController {
   private listingRead = 0
   private detailRead = 0
 
-  constructor(private readonly remote: ClientContext['remote']['pluginMarket']) {}
+  constructor(private readonly remote: ClientContext['remote']) {}
 
   getSnapshot = (): PlazaState => this.state
 
@@ -52,10 +54,17 @@ export class PlazaController {
     this.listeners.clear()
   }
 
+  async setIndexes(urls: readonly string[]): Promise<boolean> {
+    const answer = await this.remote.pluginMarket.setIndexes([...urls])
+    if (!answer.ok || this.disposed) return false
+    await this.loadIndexes()
+    return true
+  }
+
   async loadIndexes(): Promise<readonly MarketIndexSummary[] | null> {
     const read = ++this.indexesRead
     this.patch({ indexesStatus: 'loading' })
-    const answer = await this.remote.listIndexes()
+    const answer = await this.remote.pluginMarket.listIndexes()
     if (!this.current(read, this.indexesRead)) return null
     if (!answer.ok) { this.patch({ indexesStatus: 'error' }); return null }
     this.patch({ indexesStatus: 'ready', indexes: answer.value })
@@ -105,9 +114,19 @@ export class PlazaController {
 
   async readDetail(url: string, name: string, version: string, language: string): Promise<DetailState | null> {
     const read = ++this.detailRead
-    const answer = await this.remote.readEntryDetail(url, name, version, language)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<'timeout'>(resolve => { timer = setTimeout(() => resolve('timeout'), DETAIL_TIMEOUT_MS) })
+    let npmFileSources: 'npmmirror'[] = []
+    const fastest = await this.remote.pluginRegistryProbe.fastest()
     if (!this.current(read, this.detailRead)) return null
-    return answer.ok ? { status: 'ready', detail: answer.value } : { status: 'error' }
+    if (fastest.ok && fastest.value === 'https://registry.npmmirror.com/') npmFileSources = ['npmmirror']
+    const answer = await Promise.race([
+      this.remote.pluginMarket.readEntryDetail(url, name, version, language, { npmFileSources }), timeout,
+    ])
+    if (timer !== undefined) clearTimeout(timer)
+    if (!this.current(read, this.detailRead)) return null
+    if (answer === 'timeout') return { status: 'error', failure: 'timeout' }
+    return answer.ok ? { status: 'ready', detail: answer.value } : { status: 'error', failure: 'remote' }
   }
 
   invalidateDetails(): void { this.detailRead++ }
@@ -127,7 +146,7 @@ export class PlazaController {
   }
 
   private page(url: string, query: PlazaQuery, offset: number, limit: number, fetchedAt?: number, refresh = false): Promise<RemoteResult<MarketSearchResult>> {
-    return this.remote.search(url, {
+    return this.remote.pluginMarket.search(url, {
       ...(query.text.trim() ? { text: query.text.trim() } : {}),
       ...(query.category ? { category: query.category } : {}),
       ...(query.labels.length ? { labels: query.labels } : {}),
