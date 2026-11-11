@@ -33476,11 +33476,11 @@ function updateSourcePreference(preferences, url, patch$4) {
 
 //#endregion
 //#region src/client/plaza.css?dsh-inline
-var plaza_default = ".plaza,.plaza-detail{box-sizing:border-box;width:100%;height:100%;min-height:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1)}.plaza-scroll{box-sizing:border-box;scrollbar-gutter:stable;height:100%;padding:24px clamp(16px,3vw,36px) 40px;overflow:auto}.plaza-heading,.plaza-toolbar,.plaza-card footer,.plaza-detail header{align-items:center;display:flex}.plaza-heading{justify-content:space-between;gap:16px;margin-bottom:20px}.plaza-heading h2,.plaza-detail h2{margin:0;font-size:24px}.plaza-version{vertical-align:middle;border:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);border-radius:999px;padding:2px 7px;font-size:11px;font-weight:400}.plaza-heading p,.plaza-detail header p{color:var(--dsw-alias-label-secondary);margin:4px 0 0}.plaza select,.plaza input,.plaza button,.plaza-detail button{font:inherit;color:inherit}.plaza select,.plaza input{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);border-radius:10px;height:36px;padding:0 12px}.plaza-source-controls{align-items:center;gap:8px;display:flex}.plaza-source-controls button,.plaza-sources button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:8px;height:36px;padding:0 12px}.plaza-sources{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:12px;margin-bottom:16px;padding:14px}.plaza-sources h3{margin:0}.plaza-sources p{color:var(--dsw-alias-label-secondary);margin:6px 0 12px;font-size:13px}.plaza-sources ul{gap:6px;margin:0 0 10px;padding:0;list-style:none;display:grid}.plaza-sources li{justify-content:space-between;align-items:center;gap:8px;display:flex}.plaza-sources li span{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.plaza-source-add{gap:8px;display:flex}.plaza-source-add input{flex:1}.plaza-sources .plaza-source-error{color:var(--dsw-alias-state-error-primary)}.plaza-toolbar{flex-wrap:wrap;gap:8px}.plaza-toolbar input{flex:240px}.plaza-toolbar select{flex:0 180px}.plaza-view{border:.5px solid var(--dsw-alias-border-l3);border-radius:10px;display:flex;overflow:hidden}.plaza-view button{background:0 0;border:0;width:36px;height:34px}.plaza-view button[aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover)}.plaza-labels{border:0;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;display:flex}.plaza-labels legend{float:left;color:var(--dsw-alias-label-secondary);margin-right:8px}.plaza-labels label{font-size:13px}.plaza-chips{flex-wrap:wrap;gap:6px;margin-top:12px;display:flex}.plaza-chips button,.plaza-more,.plaza-state button,.plaza-back,.plaza-detail-body button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:999px;padding:5px 10px}.plaza-result-meta{min-height:20px;color:var(--dsw-alias-label-secondary);margin:18px 0 10px;font-size:13px}.plaza-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));grid-auto-rows:1fr;gap:12px;display:grid}.plaza-list{grid-template-columns:1fr;gap:8px;display:grid}.plaza-card{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:14px;flex-direction:column;min-width:0;min-height:230px;display:flex;overflow:hidden}.plaza-list .plaza-card{min-height:0}.plaza-card-main{text-align:left;cursor:pointer;background:0 0;border:0;flex:1;gap:12px;width:100%;padding:16px;display:flex}.plaza-icon{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);width:42px;height:42px;color:var(--dsw-alias-link);border-radius:11px;flex:0 0 42px;place-items:center;font-weight:700;display:grid;overflow:hidden}.plaza-icon img{object-fit:contain;width:36px;height:36px;display:block}.plaza-card-copy{flex-direction:column;min-width:0;display:flex}.plaza-package{color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;font-size:12px;overflow:hidden}.plaza-description{color:var(--dsw-alias-label-secondary);-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-top:10px;font-size:13px;line-height:19px;display:-webkit-box;overflow:hidden}.plaza-meta{color:var(--dsw-alias-label-tertiary);margin-top:8px;font-size:12px}.plaza-card-tags{gap:5px;min-height:24px;padding:0 16px;display:flex}.plaza-card-tags span{background:var(--dsw-alias-interactive-bg-hover);border-radius:5px;padding:2px 6px;font-size:11px}.plaza-card footer{border-top:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);justify-content:space-between;margin-top:10px;padding:10px 16px;font-size:12px}.plaza-more{margin:18px auto;display:block}.plaza-state{min-height:220px;color:var(--dsw-alias-label-secondary);place-items:center;gap:12px;display:grid}.plaza-detail{padding:24px clamp(16px,4vw,48px);overflow:auto}.plaza-detail header{gap:14px;margin:24px 0}.plaza-detail-body{border-top:.5px solid var(--dsw-alias-border-l3);max-width:900px;margin-top:20px;padding-top:20px}.plaza-back{border-radius:8px}.plaza-notice{border:.5px solid var(--dsw-alias-state-warn-primary);max-width:900px;color:var(--dsw-alias-state-warn-primary);border-radius:8px;padding:10px}.plaza-markdown{overflow-wrap:anywhere;line-height:1.65}.plaza-markdown>:first-child{margin-top:0}.plaza-markdown>:last-child{margin-bottom:0}.plaza-markdown img{border-radius:8px;max-width:100%;height:auto;margin:12px 0;display:block}.plaza-markdown pre{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:8px;padding:12px;overflow:auto}.plaza-markdown code,.plaza-markdown kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.plaza-markdown :not(pre)>code,.plaza-markdown kbd{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:5px;padding:1px 5px;font-size:.9em}.plaza-markdown blockquote{border-left:3px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);margin-inline:0;padding-left:14px}.plaza-markdown table{border-spacing:0;border-collapse:collapse;max-width:100%;display:block;overflow:auto}.plaza-markdown th,.plaza-markdown td{border:.5px solid var(--dsw-alias-border-l2);text-align:left;padding:6px 12px}.plaza-markdown th{background:var(--dsw-alias-bg-module-platform)}.plaza-markdown details{border:.5px solid var(--dsw-alias-border-l2);border-radius:8px;margin:12px 0;padding:8px 12px}.plaza-markdown summary{cursor:pointer;font-weight:500}.plaza-markdown input[type=checkbox]{margin-right:7px}.plaza-markdown a,.plaza-facts a{color:var(--dsw-alias-link)}.plaza-facts{gap:10px;max-width:900px;margin-top:28px;display:grid}.plaza-facts div{grid-template-columns:minmax(100px,160px) 1fr;gap:12px;display:grid}.plaza-facts dt{color:var(--dsw-alias-label-secondary)}.plaza-facts dd{overflow-wrap:anywhere;margin:0}.plaza button:focus-visible,.plaza input:focus-visible,.plaza select:focus-visible,.plaza-detail button:focus-visible,.plaza-detail a:focus-visible{outline:2px solid var(--dsw-alias-link);outline-offset:2px}@media (hover:hover){.plaza-card-main:hover,.plaza-chips button:hover,.plaza-more:hover,.plaza-back:hover{background:var(--dsw-alias-interactive-bg-hover)}}@media (width<=640px){.plaza-scroll,.plaza-detail{padding:16px 12px 32px}.plaza-heading,.plaza-source-controls,.plaza-source-add{flex-direction:column;align-items:stretch}.plaza-source-controls>*{width:100%}.plaza-sources li{flex-direction:column;align-items:stretch}.plaza-toolbar>*{flex:100%!important}.plaza-grid{grid-template-columns:1fr}.plaza-card{min-height:210px}.plaza-facts div{grid-template-columns:1fr;gap:2px}}@media (prefers-reduced-motion:reduce){.plaza *{scroll-behavior:auto!important}}";
+var plaza_default = ".plaza,.plaza-detail{box-sizing:border-box;width:100%;height:100%;min-height:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1)}.plaza-scroll{box-sizing:border-box;scrollbar-gutter:stable;height:100%;padding:24px clamp(16px,3vw,36px) 40px;overflow:auto}.plaza-heading,.plaza-toolbar,.plaza-card footer,.plaza-detail header{align-items:center;display:flex}.plaza-heading{justify-content:space-between;gap:16px;margin-bottom:20px}.plaza-heading h2,.plaza-detail h2{margin:0;font-size:24px}.plaza-version{vertical-align:middle;border:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);border-radius:999px;padding:2px 7px;font-size:11px;font-weight:400}.plaza-heading p,.plaza-detail header p{color:var(--dsw-alias-label-secondary);margin:4px 0 0}.plaza select,.plaza input,.plaza button,.plaza-detail button{font:inherit;color:inherit}.plaza select,.plaza input{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);border-radius:10px;height:36px;padding:0 12px}.plaza-source-controls{align-items:center;gap:8px;display:flex}.plaza-source-controls button,.plaza-sources button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:8px;height:36px;padding:0 12px}.plaza-sources{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:12px;margin-bottom:16px;padding:14px}.plaza-sources h3{margin:0}.plaza-sources p{color:var(--dsw-alias-label-secondary);margin:6px 0 12px;font-size:13px}.plaza-sources ul{gap:6px;margin:0 0 10px;padding:0;list-style:none;display:grid}.plaza-sources li{justify-content:space-between;align-items:center;gap:8px;display:flex}.plaza-sources li span{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.plaza-source-add{gap:8px;display:flex}.plaza-source-add input{flex:1}.plaza-sources .plaza-source-error{color:var(--dsw-alias-state-error-primary)}.plaza-toolbar{flex-wrap:wrap;gap:8px}.plaza-toolbar input{flex:240px}.plaza-toolbar select{flex:0 180px}.plaza-view{border:.5px solid var(--dsw-alias-border-l3);border-radius:10px;display:flex;overflow:hidden}.plaza-view button{background:0 0;border:0;width:36px;height:34px}.plaza-view button[aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover)}.plaza-labels{border:0;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;display:flex}.plaza-labels legend{float:left;color:var(--dsw-alias-label-secondary);margin-right:8px}.plaza-labels label{font-size:13px}.plaza-chips{flex-wrap:wrap;gap:6px;margin-top:12px;display:flex}.plaza-chips button,.plaza-more,.plaza-state button,.plaza-back,.plaza-detail-body button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:999px;padding:5px 10px}.plaza-result-meta{min-height:20px;color:var(--dsw-alias-label-secondary);margin:18px 0 10px;font-size:13px}.plaza-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));grid-auto-rows:1fr;gap:12px;display:grid}.plaza-list{grid-template-columns:1fr;gap:8px;display:grid}.plaza-card{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:14px;flex-direction:column;min-width:0;min-height:230px;display:flex;overflow:hidden}.plaza-list .plaza-card{min-height:0}.plaza-card-main{text-align:left;cursor:pointer;background:0 0;border:0;flex:1;gap:12px;width:100%;padding:16px;display:flex}.plaza-icon{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);width:42px;height:42px;color:var(--dsw-alias-link);border-radius:11px;flex:0 0 42px;place-items:center;font-weight:700;display:grid;overflow:hidden}.plaza-icon img{object-fit:contain;width:36px;height:36px;display:block}.plaza-card-copy{flex-direction:column;min-width:0;display:flex}.plaza-package{color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;font-size:12px;overflow:hidden}.plaza-description{color:var(--dsw-alias-label-secondary);-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-top:10px;font-size:13px;line-height:19px;display:-webkit-box;overflow:hidden}.plaza-meta{color:var(--dsw-alias-label-tertiary);margin-top:8px;font-size:12px}.plaza-card-tags{gap:5px;min-height:24px;padding:0 16px;display:flex}.plaza-card-tags span{background:var(--dsw-alias-interactive-bg-hover);border-radius:5px;padding:2px 6px;font-size:11px}.plaza-card footer{border-top:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);justify-content:space-between;margin-top:10px;padding:10px 16px;font-size:12px}.plaza-action{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:8px;padding:5px 10px}.plaza-action:disabled{cursor:not-allowed;opacity:.5}.plaza-more{margin:18px auto;display:block}.plaza-state{min-height:220px;color:var(--dsw-alias-label-secondary);place-items:center;gap:12px;display:grid}.plaza-detail{padding:24px clamp(16px,4vw,48px);overflow:auto}.plaza-detail header{gap:14px;margin:24px 0}.plaza-detail-heading{flex:1;min-width:0}.plaza-detail-body{border-top:.5px solid var(--dsw-alias-border-l3);max-width:900px;margin-top:20px;padding-top:20px}.plaza-back{border-radius:8px}.plaza-notice{border:.5px solid var(--dsw-alias-state-warn-primary);max-width:900px;color:var(--dsw-alias-state-warn-primary);border-radius:8px;padding:10px}.plaza-markdown{overflow-wrap:anywhere;line-height:1.65}.plaza-markdown>:first-child{margin-top:0}.plaza-markdown>:last-child{margin-bottom:0}.plaza-markdown img{border-radius:8px;max-width:100%;height:auto;margin:12px 0;display:block}.plaza-markdown pre{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:8px;padding:12px;overflow:auto}.plaza-markdown code,.plaza-markdown kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.plaza-markdown :not(pre)>code,.plaza-markdown kbd{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:5px;padding:1px 5px;font-size:.9em}.plaza-markdown blockquote{border-left:3px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);margin-inline:0;padding-left:14px}.plaza-markdown table{border-spacing:0;border-collapse:collapse;max-width:100%;display:block;overflow:auto}.plaza-markdown th,.plaza-markdown td{border:.5px solid var(--dsw-alias-border-l2);text-align:left;padding:6px 12px}.plaza-markdown th{background:var(--dsw-alias-bg-module-platform)}.plaza-markdown details{border:.5px solid var(--dsw-alias-border-l2);border-radius:8px;margin:12px 0;padding:8px 12px}.plaza-markdown summary{cursor:pointer;font-weight:500}.plaza-markdown input[type=checkbox]{margin-right:7px}.plaza-markdown a,.plaza-facts a{color:var(--dsw-alias-link)}.plaza-versions{max-width:900px;margin-top:28px}.plaza-versions h3{margin-bottom:10px}.plaza-versions ul{gap:8px;margin:0;padding:0;list-style:none;display:grid}.plaza-versions li{border:.5px solid var(--dsw-alias-border-l2);border-radius:8px;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;display:flex}.plaza-versions li>div{flex-wrap:wrap;align-items:center;gap:8px;min-width:0;display:flex}.plaza-versions small{width:100%;color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere}.plaza-badge{background:var(--dsw-alias-interactive-bg-hover);border-radius:999px;padding:2px 7px;font-size:11px}.plaza-version-status{color:var(--dsw-alias-state-warn-primary);font-size:12px}.plaza-facts{gap:10px;max-width:900px;margin-top:28px;display:grid}.plaza-facts div{grid-template-columns:minmax(100px,160px) 1fr;gap:12px;display:grid}.plaza-facts dt{color:var(--dsw-alias-label-secondary)}.plaza-facts dd{overflow-wrap:anywhere;margin:0}.plaza button:focus-visible,.plaza input:focus-visible,.plaza select:focus-visible,.plaza-detail button:focus-visible,.plaza-detail a:focus-visible{outline:2px solid var(--dsw-alias-link);outline-offset:2px}@media (hover:hover){.plaza-card-main:hover,.plaza-chips button:hover,.plaza-more:hover,.plaza-back:hover,.plaza-action:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}}@media (width<=640px){.plaza-scroll,.plaza-detail{padding:16px 12px 32px}.plaza-heading,.plaza-source-controls,.plaza-source-add{flex-direction:column;align-items:stretch}.plaza-source-controls>*{width:100%}.plaza-sources li{flex-direction:column;align-items:stretch}.plaza-toolbar>*{flex:100%!important}.plaza-grid{grid-template-columns:1fr}.plaza-card{min-height:210px}.plaza-facts div{grid-template-columns:1fr;gap:2px}}@media (prefers-reduced-motion:reduce){.plaza *{scroll-behavior:auto!important}}";
 
 //#endregion
 //#region package.json
-var version = "0.2.1";
+var version = "0.3.0";
 
 //#endregion
 //#region src/client/version.ts
@@ -33503,15 +33503,34 @@ function sourceAlreadyExists(urls, candidate) {
 }
 
 //#endregion
+//#region src/client/install.ts
+function presentedVersion(entry) {
+	return entry.versions.find((item) => item.version === entry.defaultVersion) ?? entry.versions[0];
+}
+function versionInstallable(version$1) {
+	return version$1.compatibility.compatible || version$1.compatibility.exempted;
+}
+function requestInstall(install, entry, version$1, title) {
+	if (entry.installation.status === "provided" || !versionInstallable(version$1)) return false;
+	install({
+		...version$1.install,
+		title,
+		version: version$1.version
+	});
+	return true;
+}
+function sourceLabel(name$1, version$1) {
+	if (version$1.source.type === "npm") return version$1.source.registry === void 0 ? `${name$1}@${version$1.version}` : `${name$1}@${version$1.version} · ${version$1.source.registry}`;
+	return `${version$1.source.url}#${version$1.source.commit.slice(0, 12)}${version$1.source.path ? `/${version$1.source.path}` : ""}`;
+}
+
+//#endregion
 //#region src/client/Plaza.tsx
 function resolve(ctx, value, fallback) {
 	return value === void 0 ? fallback : ctx.locale.resolveText(value);
 }
 function formatDate(timestamp, language) {
 	return new Intl.DateTimeFormat(language, { dateStyle: "medium" }).format(/* @__PURE__ */ new Date(timestamp * 1e3));
-}
-function presented(entry) {
-	return entry.versions.find((item) => item.version === entry.defaultVersion) ?? entry.versions[0];
 }
 function PluginIcon({ entry }) {
 	const [failed, setFailed] = (0, react.useState)(false);
@@ -33527,8 +33546,8 @@ function PluginIcon({ entry }) {
 		}) : entry.name.slice(0, 1).toUpperCase()
 	});
 }
-function Card({ entry, onOpen, ctx, t, language, labels, category }) {
-	const version$1 = presented(entry);
+function Card({ entry, onOpen, onInstall, onOpenInstalled, ctx, t, language, labels, category }) {
+	const version$1 = presentedVersion(entry);
 	const shownLabels = entry.metadata.labels.slice(0, 2);
 	const status = entry.installation.status;
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("article", {
@@ -33567,7 +33586,24 @@ function Card({ entry, onOpen, ctx, t, language, labels, category }) {
 					entry.metadata.labels.length > shownLabels.length && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: ["+", entry.metadata.labels.length - shownLabels.length] })
 				]
 			}),
-			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("footer", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: version$1.compatibility.compatible ? t("compatible") : version$1.compatibility.exempted ? t("compatibilityExempted") : t("incompatible") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: status === "update-available" ? t("update") : status === "provided" ? t("provided") : status === "installed" || status === "different-version" ? t("installed") : version$1.version })] })
+			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("footer", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: version$1.compatibility.compatible ? t("compatible") : version$1.compatibility.exempted ? t("compatibilityExempted") : t("incompatible") }), status === "not-installed" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+				type: "button",
+				className: "plaza-action",
+				disabled: !versionInstallable(version$1),
+				onClick: (event) => {
+					event.stopPropagation();
+					onInstall();
+				},
+				children: t("install")
+			}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+				type: "button",
+				className: "plaza-action",
+				onClick: (event) => {
+					event.stopPropagation();
+					onOpenInstalled();
+				},
+				children: status === "update-available" ? t("update") : status === "provided" ? t("provided") : t("installed")
+			})] })
 		]
 	});
 }
@@ -33578,7 +33614,7 @@ function detailImage(document$3, path$1) {
 function documentBase() {
 	return typeof document === "undefined" ? "http://localhost/" : document.baseURI;
 }
-function Plaza({ ctx, controller, t }) {
+function Plaza({ ctx, controller, t, install, openPackage }) {
 	const state = (0, react.useSyncExternalStore)(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
 	const localeSnapshot = (0, react.useSyncExternalStore)(ctx.locale.subscribe.bind(ctx.locale), ctx.locale.getSnapshot.bind(ctx.locale), ctx.locale.getSnapshot.bind(ctx.locale));
 	const [preferences, setPreferences] = (0, react.useState)(() => typeof localStorage === "undefined" ? DEFAULT_PREFERENCES : readPreferences(localStorage));
@@ -33728,10 +33764,13 @@ function Plaza({ ctx, controller, t }) {
 			view: next
 		});
 	};
+	const installVersion = (entry, version$1) => {
+		requestInstall(install, entry, version$1, resolve(ctx, entry.title, entry.name));
+	};
 	const readDetail = async (entry) => {
 		setDetailRequest((value) => value + 1);
 		setDetail({ status: "loading" });
-		const version$1 = presented(entry);
+		const version$1 = presentedVersion(entry);
 		const answer = await controller.readDetail(sourceRef.current, entry.name, version$1.version, language);
 		if (answer !== null) setDetail(answer);
 	};
@@ -33808,7 +33847,7 @@ function Plaza({ ctx, controller, t }) {
 	const sortKeys = Object.entries(metadata?.sortKeys ?? {});
 	const chips = [query.category, ...query.labels].filter(Boolean);
 	if (selected !== null) {
-		const version$1 = presented(selected);
+		const version$1 = presentedVersion(selected);
 		const doc = detail?.status === "ready" && detail.detail.status === "found" ? detail.detail : void 0;
 		return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
 			className: "plaza-detail",
@@ -33821,14 +33860,32 @@ function Plaza({ ctx, controller, t }) {
 					onClick: closeDetail,
 					children: ["← ", t("back")]
 				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PluginIcon, { entry: selected }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h2", {
-					id: "plaza-detail-title",
-					children: resolve(ctx, selected.title, selected.name)
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
-					selected.name,
-					" · ",
-					version$1.version
-				] })] })] }),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", { children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PluginIcon, { entry: selected }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "plaza-detail-heading",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h2", {
+							id: "plaza-detail-title",
+							children: resolve(ctx, selected.title, selected.name)
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
+							selected.name,
+							" · ",
+							version$1.version
+						] })]
+					}),
+					selected.installation.status === "not-installed" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: "plaza-action",
+						disabled: !versionInstallable(version$1),
+						onClick: () => installVersion(selected, version$1),
+						children: t("install")
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: "plaza-action",
+						onClick: () => openPackage(selected.name),
+						children: t("openInstalled")
+					})
+				] }),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: resolve(ctx, selected.description, "") }),
 				!version$1.compatibility.compatible && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 					className: "plaza-notice",
@@ -33844,6 +33901,46 @@ function Plaza({ ctx, controller, t }) {
 						source: doc.markdown,
 						resolveImage: (path$1) => detailImage(doc.document, path$1)
 					})
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+					className: "plaza-versions",
+					"aria-labelledby": "plaza-versions-title",
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
+						id: "plaza-versions-title",
+						children: t("versions")
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", { children: selected.versions.map((item) => {
+						const current = selected.installation.installedVersion === item.version;
+						const offered = selected.installation.status !== "provided" && !current && versionInstallable(item);
+						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: item.version }),
+								item.version === selected.defaultVersion && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: "plaza-badge",
+									children: t("recommended")
+								}),
+								current && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: "plaza-badge",
+									children: t("current")
+								}),
+								!item.compatibility.compatible && item.compatibility.exempted && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: "plaza-badge",
+									children: t("compatibilityExempted")
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: formatDate(item.publishTimestamp, language) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: sourceLabel(selected.name, item) })
+							] }),
+							offered && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: "plaza-action",
+								onClick: () => installVersion(selected, item),
+								children: t("installVersion", { version: item.version })
+							}),
+							!versionInstallable(item) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: "plaza-version-status",
+								children: t("incompatible")
+							})
+						] }, item.version);
+					}) })]
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", {
 					className: "plaza-facts",
@@ -34091,6 +34188,8 @@ function Plaza({ ctx, controller, t }) {
 					children: result?.entries.map((entry) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Card, {
 						entry,
 						onOpen: () => void openDetail(entry, document.activeElement),
+						onInstall: () => installVersion(entry, presentedVersion(entry)),
+						onOpenInstalled: () => openPackage(entry.name),
 						ctx,
 						t,
 						language,
@@ -34147,6 +34246,12 @@ const zh = {
 	installed: "已安装",
 	update: "有更新",
 	provided: "DSH 已提供",
+	install: "安装",
+	openInstalled: "在已安装中查看",
+	versions: "版本",
+	recommended: "推荐",
+	current: "当前已安装",
+	installVersion: "安装 {version}",
 	author: "作者",
 	homepage: "项目主页",
 	sourceCode: "源代码",
@@ -34197,6 +34302,12 @@ const en = {
 	installed: "Installed",
 	update: "Update available",
 	provided: "Provided by DSH",
+	install: "Install",
+	openInstalled: "View in Installed",
+	versions: "Versions",
+	recommended: "Recommended",
+	current: "Currently installed",
+	installVersion: "Install {version}",
 	author: "Author",
 	homepage: "Homepage",
 	sourceCode: "Source code",

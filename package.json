@@ -1,6 +1,6 @@
 {
   "name": "dsh-plaza",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "description": "DSH 原生插件市场界面，复用官方 pluginMarket 与 Plugin Manager。",
   "type": "module",
