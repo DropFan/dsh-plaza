@@ -1,6 +1,22 @@
 import { readFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
 import { defineConfig } from 'tsdown'
 import { transform } from 'lightningcss'
+
+function browserVfile() {
+  const browserFiles: Record<string, string> = {
+    '#minpath': 'minpath.browser.js',
+    '#minproc': 'minproc.browser.js',
+    '#minurl': 'minurl.browser.js',
+  }
+  return {
+    name: 'dsh-plaza-vfile-browser',
+    resolveId(source: string, importer: string | undefined) {
+      const file = browserFiles[source]
+      return file !== undefined && importer?.includes('/vfile/lib/') === true ? resolve(dirname(importer), file) : null
+    },
+  }
+}
 
 function inlineCss() {
   const suffix = '.css?inline'
@@ -40,7 +56,7 @@ export default defineConfig([
     platform: 'browser',
     dts: false,
     external: ['react', 'react/jsx-runtime', 'react-dom'],
-    plugins: [inlineCss()],
+    plugins: [browserVfile(), inlineCss()],
     outputOptions: {
       entryFileNames: 'client.js',
       banner: "window.__ModuleLoader__.load({ id: 'dsh-plaza', factory: (require) => { var module = { exports: {} }; var exports = module.exports;",

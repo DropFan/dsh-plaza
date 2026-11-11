@@ -1,6 +1,6 @@
 {
   "name": "dsh-plaza",
-  "version": "0.1.5",
+  "version": "0.2.1",
   "private": true,
   "description": "DSH 原生插件市场界面，复用官方 pluginMarket 与 Plugin Manager。",
   "type": "module",
@@ -73,6 +73,10 @@
     "lightningcss": "^1.30.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1",
     "tsdown": "^0.15.0",
     "typescript": "^5.9.0",
     "vitest": "^4.0.0"

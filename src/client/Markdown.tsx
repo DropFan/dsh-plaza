@@ -1,7 +1,8 @@
-import React, { Fragment, type ReactNode } from 'react'
-
-const TOKEN = /(!?\[[^\]]*\]\([^\s)]+(?:\s+"[^"]*")?\)|`[^`]+`|\*\*[^*]+\*\*)/g
-const LINK = /^(!?)\[([^\]]*)\]\(([^\s)]+)(?:\s+"[^"]*")?\)$/
+import React, { type ComponentPropsWithoutRef, type ReactNode } from 'react'
+import ReactMarkdown, { type Components, type UrlTransform } from 'react-markdown'
+import rehypeRaw from 'rehype-raw'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
+import remarkGfm from 'remark-gfm'
 
 export function safeExternal(value: string): string | undefined {
   try {
@@ -10,52 +11,56 @@ export function safeExternal(value: string): string | undefined {
   } catch { return undefined }
 }
 
-function inline(text: string, resolveImage: (path: string) => string | undefined): ReactNode[] {
-  return text.split(TOKEN).filter(Boolean).map((part, index) => {
-    if (part.startsWith('`') && part.endsWith('`')) return <code key={index}>{part.slice(1, -1)}</code>
-    if (part.startsWith('**') && part.endsWith('**')) return <strong key={index}>{part.slice(2, -2)}</strong>
-    const match = LINK.exec(part)
-    if (match === null) return <Fragment key={index}>{part}</Fragment>
-    const [, image, label = '', destination = ''] = match
-    if (image === '!') {
-      const src = resolveImage(destination)
-      return src === undefined ? <Fragment key={index}>{label}</Fragment> : <img key={index} src={src} alt={label} loading="lazy" referrerPolicy="no-referrer" />
-    }
-    const href = safeExternal(destination)
-    return href === undefined
-      ? <Fragment key={index}>{label}</Fragment>
-      : <a key={index} href={href} target="_blank" rel="noopener noreferrer">{label} <span aria-hidden="true">↗</span></a>
-  })
+function relativeDestination(value: string): boolean {
+  return value !== '' && !/^(?:[a-z][a-z\d+.-]*:|\/\/|#|\/)/iu.test(value)
 }
 
-export function Markdown({ source, resolveImage }: { readonly source: string; readonly resolveImage: (path: string) => string | undefined }) {
-  const blocks: ReactNode[] = []
-  const lines = source.replace(/\r\n?/g, '\n').split('\n')
-  let paragraph: string[] = []
-  let list: string[] = []
-  let code: string[] | null = null
-  const flush = () => {
-    if (paragraph.length) { blocks.push(<p key={`p-${blocks.length}`}>{inline(paragraph.join(' '), resolveImage)}</p>); paragraph = [] }
-    if (list.length) { blocks.push(<ul key={`l-${blocks.length}`}>{list.map((item, index) => <li key={index}>{inline(item, resolveImage)}</li>)}</ul>); list = [] }
+const schema = {
+  ...defaultSchema,
+  tagNames: [...new Set([...(defaultSchema.tagNames ?? []), 'details', 'summary', 'kbd', 'sub', 'sup'])],
+  attributes: {
+    ...defaultSchema.attributes,
+    a: [...(defaultSchema.attributes?.a ?? []), 'title'],
+    img: [...(defaultSchema.attributes?.img ?? []), 'alt', 'height', 'title', 'width'],
+    ol: [...(defaultSchema.attributes?.ol ?? []), 'start'],
+    td: [...(defaultSchema.attributes?.td ?? []), 'align'],
+    th: [...(defaultSchema.attributes?.th ?? []), 'align'],
+  },
+} satisfies Parameters<typeof rehypeSanitize>[0]
+
+function externalLink(props: ComponentPropsWithoutRef<'a'> & { readonly children?: ReactNode }) {
+  const href = typeof props.href === 'string' ? safeExternal(props.href) : undefined
+  const { children, ...rest } = props
+  return href === undefined
+    ? <>{children}</>
+    : <a {...rest} href={href} target="_blank" rel="noopener noreferrer">{children} <span aria-hidden="true">↗</span></a>
+}
+
+export function Markdown({ source, resolveImage }: {
+  readonly source: string
+  readonly resolveImage: (path: string) => string | undefined
+}) {
+  const transformUrl: UrlTransform = (url, key, node) => {
+    if (node.tagName === 'img' && key === 'src') return relativeDestination(url) ? resolveImage(url) ?? '' : ''
+    if (node.tagName === 'a' && key === 'href') return safeExternal(url) ?? ''
+    return ''
   }
-  for (const line of lines) {
-    if (line.startsWith('```')) {
-      if (code === null) { flush(); code = [] } else { blocks.push(<pre key={`c-${blocks.length}`}><code>{code.join('\n')}</code></pre>); code = null }
-      continue
-    }
-    if (code !== null) { code.push(line); continue }
-    const heading = /^(#{1,4})\s+(.+)$/.exec(line)
-    if (heading !== null) {
-      flush(); const level = heading[1]?.length ?? 2; const content = inline(heading[2] ?? '', resolveImage)
-      blocks.push(React.createElement(`h${level}`, { key: `h-${blocks.length}` }, content)); continue
-    }
-    const item = /^[-*]\s+(.+)$/.exec(line)
-    if (item !== null) { if (paragraph.length) flush(); list.push(item[1] ?? ''); continue }
-    if (line.trim() === '') { flush(); continue }
-    if (list.length) flush()
-    paragraph.push(line.trim())
+  const components: Components = {
+    a: ({ node: _node, ...props }) => externalLink(props),
+    img: ({ node: _node, ...props }) => props.src
+      ? <img {...props} loading="lazy" referrerPolicy="no-referrer" />
+      : null,
   }
-  flush()
-  if (code !== null) blocks.push(<pre key={`c-${blocks.length}`}><code>{code.join('\n')}</code></pre>)
-  return <div className="plaza-markdown">{blocks}</div>
+  return (
+    <div className="plaza-markdown">
+      <ReactMarkdown
+        remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
+        components={components}
+        urlTransform={transformUrl}
+      >
+        {source}
+      </ReactMarkdown>
+    </div>
+  )
 }
