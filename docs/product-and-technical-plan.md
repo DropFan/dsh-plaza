@@ -135,7 +135,7 @@ MVP 沿用官方每页 50 条和“显示更多”。禁止自动无限滚动。
 pluginMarket.readEntryDetail(url, name, version, language)
 ```
 
-原始 HTML 保持禁用。
+详情支持 GitHub Flavored Markdown 和常见 README HTML；HTML 先经过 GitHub 风格白名单净化，脚本、事件属性、内联样式、iframe 和危险 URL 协议不会进入页面。
 
 ## 7. 安装与管理
 
@@ -220,27 +220,28 @@ Official Host
 
 ## 10. 实施计划
 
-### 阶段 0：验证契约
+### 阶段 0：验证契约（已完成）
 
-- 建立 `pluginMarket` 与 `pluginManager` API 契约测试。
-- 验证 Desktop 和 Web 下的 Remote 权限、详情图片路由和安装 Owner Props。
-- 选定一个 Format 1 索引作为测试源。
+- 已使用 DSH `0.2.2-rc.1` 类型、源码和真实运行时核对 `pluginMarket`、`plugins.tab` 与 Owner Props。
+- 已验证 Desktop Remote、详情图片路由、Registry 探测和 Client Module Loader 产物契约。
+- 测试源采用 `https://cdn.jsdelivr.net/npm/dsh-plugin-catalog/index.json`。
 
-### 阶段 1：只读 MVP
+### 阶段 1：只读 MVP（已完成）
 
-- 新 `plugins.tab`；
-- 来源、搜索、分类、标签和排序；
-- 规则网格/紧凑列表；
-- 应用内详情；
-- 状态恢复。
+- 已注册新的 `plugins.tab`；
+- 已完成来源、搜索、分类、标签、排序和稳定分页；
+- 已完成规则网格、紧凑列表和按来源状态恢复；
+- 已完成应用内详情、GFM/安全 HTML、图片与外链；
+- 已在真实 Desktop Profile 验证深浅主题、窄屏、键盘返回和滚动恢复。
 
-### 阶段 2：安装闭环
+### 阶段 2：安装闭环（核心链路已完成）
 
-- 精确版本选择；
-- 安装确认；
-- Owner `install`；
-- 已安装条目 `openPackage`；
-- 验证兼容性、构建审批、取消和重启结果。
+- 已展示推荐版本和完整版本列表；
+- 已将索引给出的精确安装目标交给 Owner `install`；
+- 已通过 `openPackage` 进入官方 Installed 详情；
+- 已监听官方变更事件刷新安装状态；
+- 已完成一次真实安装、状态刷新、Installed 跳转和官方移除测试；
+- 待系统覆盖构建脚本审批、用户取消、安装失败、需重启和断线恢复。
 
 ### 阶段 3：并行试用
 
@@ -302,10 +303,8 @@ Official Host
 
 ## 13. 下一步
 
-首先实现只读交互原型：
-
-1. 注册 `plugins.tab`；
-2. 接入 Format 1 索引；
-3. 完成规则网格、列表、筛选、排序和应用内详情；
-4. 在真实 DSH 页面验证滚动、响应式、主题和返回状态；
-5. 体验通过后接入官方安装流程。
+1. 建立 50、500 和 4000 条 Format 1 索引性能基线，决定是否需要列表虚拟化。
+2. 系统验证官方安装异常路径：不兼容、豁免、构建脚本审批、取消、失败、断线恢复、HMR 和需重启。
+3. 添加 CI，覆盖冻结锁文件安装、类型检查、测试、构建、打包清单和 Client 体积预算。
+4. 与官方 Discover 并行试用，记录搜索、详情和安装失败类型。
+5. 稳定后先关闭旧市场入口，再决定是否卸载 dshmarket；默认不迁移收藏、分组和备注。

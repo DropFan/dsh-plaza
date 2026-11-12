@@ -22,19 +22,32 @@ DSH Plaza Client
 
 DSH Plaza 不直接运行 pnpm，不直接修改 Profile、Lockfile 或 Loader 配置。
 
-## 当前阶段
+## 当前能力
 
-项目处于初始化和只读 MVP 设计阶段。第一阶段计划实现：
+DSH Plaza 已完成浏览、详情和官方安装闭环：
 
-1. 注册独立的 Plugins Tab。
-2. 接入 Format 1 插件索引。
-3. 实现规则网格与紧凑列表。
-4. 实现搜索、分类、标签、筛选与排序。
-5. 实现应用内插件详情和列表状态恢复。
-6. 验证体验后接入 DSH 官方安装流程。
+- 通过 `plugins.tab` 注册 DSH 原生 Plaza 页面。
+- 管理可配置的 Format 1 索引源。
+- 支持搜索、分类、标签、组合筛选、索引排序和分页。
+- 提供等高规则网格与紧凑列表，并按来源恢复查询、已加载数量和滚动位置。
+- 在应用内渲染 GFM Markdown、经过白名单净化的常见 README HTML，以及官方详情图片。
+- 展示推荐版本、完整版本列表、安装来源、DSH 兼容性和安装状态。
+- 通过 `plugins.tab` Owner 的 `install(...)` 调用官方安装流程；已安装条目通过 `openPackage(...)` 进入官方 Installed 详情。
+- 支持中英文、深浅主题、窄屏布局和键盘操作。
 
-详细方案见 [产品与技术方案](docs/product-and-technical-plan.md)。
+详细设计、边界与阶段状态见 [产品与技术方案](docs/product-and-technical-plan.md)，项目结构与验证方式见 [开发与验证说明](docs/scaffold.md)。
+
+## 开发
+
+当前要求 DSH `>=0.2.2-rc.1 <0.3.0`，并依赖官方实验 Plugin Market Bundle 提供唯一的 `pluginMarket` Host Service。
+
+```sh
+pnpm install
+pnpm check
+```
+
+`pnpm check` 会运行严格类型检查、源码测试、Host/Client 构建和 Client 产物契约测试。
 
 ## 开发状态
 
-尚未发布，也尚未承诺稳定 API。支持的 DSH 版本范围将在完成首个契约验证后确定。
+当前版本为 `0.3.0`，尚未发布，也尚未承诺稳定 API。代码已在真实 DSH Desktop Profile 中验证；后续重点是性能基线、更多官方安装异常场景和并行试用。
