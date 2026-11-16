@@ -33,11 +33,11 @@ pnpm check
 
 ## 当前限制
 
-- 当前会话的 Agent 预设没有暴露 `cordis_inspect_list` / `cordis_inspect_query` Tool；契约改由同版本 `0.2.2-rc.1` 本机源码、Inspect catalog 与已发布类型包交叉核对。
+- 当前会话的 Agent 预设没有暴露 `cordis_inspect_list` / `cordis_inspect_query` Tool；契约由运行中的 DSH `0.2.2-rc.2` 安装源码、升级指南和已发布类型包交叉核对。
 - 当前已实现列表、组合查询、规则网格/列表、详情图片路由，以及每来源查询、已加载数量和滚动位置恢复。
 - 详情使用 `react-markdown`、`remark-gfm`、`rehype-raw` 与 `rehype-sanitize` 渲染 GFM 和常见 README HTML；脚本、事件属性、内联样式、iframe 和危险协议会被移除。
 - 已接入官方安装闭环：推荐版本与精确版本调用 Owner `install`，已安装、可更新或 DSH 提供的条目调用 `openPackage`。更新、启停、配置、卸载和恢复仍由官方 Installed/Plugin Manager 负责。
 - 未实现收藏、评论、分组、备注、备份或自建包管理事务。
-- 已在 DSH Desktop `0.2.2-rc.1` Profile 中完成真实集成验证：Slot、Format 1 索引、搜索筛选、规则网格/列表、详情、深浅主题、窄屏、键盘返回、状态恢复和官方安装/移除闭环均通过。
+- 已在 DSH Desktop `0.2.2-rc.1` 完成完整集成验证，并在 `0.2.2-rc.2` 复核运行与核心契约：Slot、Format 1 索引、搜索筛选、规则网格/列表、详情、深浅主题、窄屏、键盘返回、状态恢复和官方安装/移除闭环均保持兼容。
 - 测试索引使用 dshmarket 文档公开推荐的独立 Format 1 地址 `https://cdn.jsdelivr.net/npm/dsh-plugin-catalog/index.json`；不调用 dshmarket 私有 API，也不读取其状态文件。
 - Plaza Bundle 只声明 UI row；官方实验 Market Bundle 是 `pluginMarket` Host row 的唯一 Owner，避免重复行导致 Settings 无法保存来源。

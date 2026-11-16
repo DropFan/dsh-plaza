@@ -13,7 +13,7 @@ function version(value: string, options: { compatible?: boolean; exempted?: bool
     engines: {},
     install: { spec: `plugin@${value}`, registry: 'https://registry.example/' },
     compatibility: compatible ? { compatible: true } : {
-      compatible: false, runtimeVersion: '0.2.2-rc.1', requirements: { 'engines.dsh': '>=9' }, exempted: options.exempted ?? false,
+      compatible: false, runtimeVersion: '0.2.2-rc.2', requirements: { 'engines.dsh': '>=9' }, exempted: options.exempted ?? false,
     },
   } as MarketEntry['versions'][number]
 }

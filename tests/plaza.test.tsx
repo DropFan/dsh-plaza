@@ -27,7 +27,7 @@ describe('Plaza lifecycle', () => {
   it('survives React StrictMode effect replay and shows empty-source state', async () => {
     const { ctx, listIndexes } = context()
     const controller = new PlazaController({ ...ctx.remote, pluginRegistryProbe: { fastest: vi.fn() } } as never)
-    render(<StrictMode><Plaza ctx={ctx as never} controller={controller} t={t as never} install={vi.fn()} openPackage={vi.fn()} /></StrictMode>)
+    render(<StrictMode><Plaza ctx={ctx as never} controller={controller} t={t as never} install={vi.fn()} update={vi.fn()} openPackage={vi.fn()} /></StrictMode>)
     await act(async () => {})
     expect(listIndexes).toHaveBeenCalled()
     expect(screen.getByText('empty')).toBeInTheDocument()

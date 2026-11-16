@@ -222,7 +222,7 @@ Official Host
 
 ### 阶段 0：验证契约（已完成）
 
-- 已使用 DSH `0.2.2-rc.1` 类型、源码和真实运行时核对 `pluginMarket`、`plugins.tab` 与 Owner Props。
+- 已使用 DSH `0.2.2-rc.2` 类型、源码和真实运行时复核 `pluginMarket`、`plugins.tab` 与 Owner Props；仍兼容 `0.2.2-rc.1`。
 - 已验证 Desktop Remote、详情图片路由、Registry 探测和 Client Module Loader 产物契约。
 - 测试源采用 `https://cdn.jsdelivr.net/npm/dsh-plugin-catalog/index.json`。
 
