@@ -23,7 +23,11 @@ export function requestInstall(
 
 export function sourceLabel(name: string, version: MarketVersion): string {
   if (version.source.type === 'npm') return version.source.registry === undefined
-    ? `${name}@${version.version}`
-    : `${name}@${version.version} · ${version.source.registry}`
-  return `${version.source.url}#${version.source.commit.slice(0, 12)}${version.source.path ? `/${version.source.path}` : ''}`
+    ? `npm · ${name}@${version.version}`
+    : `npm · ${name}@${version.version} · ${version.source.registry}`
+  return `git · ${version.source.url}#${version.source.commit}${version.source.path ? `/${version.source.path}` : ''}`
+}
+
+export function installTargetLabel(version: MarketVersion): string {
+  return version.install.registry === undefined ? version.install.spec : `${version.install.spec} · ${version.install.registry}`
 }

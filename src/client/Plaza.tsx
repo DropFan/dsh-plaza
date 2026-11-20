@@ -7,11 +7,13 @@ import { DETAIL_TIMEOUT_MS, PAGE_SIZE, PlazaController, type DetailState } from 
 import {
   DEFAULT_PREFERENCES, readPreferences, sourcePreference, updateSourcePreference, writePreferences, type PlazaPreferences,
 } from './persistence.js'
-import { INITIAL_QUERY, activeFilterCount, declaredQuery, toggleLabel, withText, type PlazaQuery, type ViewMode } from './query.js'
+import {
+  INITIAL_QUERY, activeFilterCount, declaredQuery, filterEntries, toggleLabel, withText, type PlazaQuery, type ViewMode,
+} from './query.js'
 import plazaCss from './plaza.css?inline'
 import { PLAZA_VERSION } from './version.js'
 import { canonicalIndexUrl, sourceAlreadyExists } from './sources.js'
-import { presentedVersion, requestInstall, sourceLabel, versionInstallable, type MarketVersion } from './install.js'
+import { installTargetLabel, presentedVersion, requestInstall, sourceLabel, versionInstallable, type MarketVersion } from './install.js'
 
 interface PlazaProps extends PluginTabProps {
   readonly ctx: ClientContext
@@ -25,6 +27,41 @@ function resolve(ctx: ClientContext, value: LocalizedText | undefined, fallback:
 
 function formatDate(timestamp: number, language: string): string {
   return new Intl.DateTimeFormat(language, { dateStyle: 'medium' }).format(new Date(timestamp * 1000))
+}
+
+function formatDateTime(timestamp: number, language: string): string {
+  return new Intl.DateTimeFormat(language, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(timestamp))
+}
+
+function compatibilityText(version: MarketVersion, t: PlazaProps['t']): string {
+  if (version.compatibility.compatible) return t('compatible')
+  return version.compatibility.exempted ? t('compatibilityExempted') : t('incompatible')
+}
+
+function installationText(entry: MarketEntry, t: PlazaProps['t']): string {
+  const installed = entry.installation.installedVersion
+  if (entry.installation.status === 'not-installed') return t('notInstalled')
+  if (entry.installation.status === 'provided') return t('provided')
+  if (entry.installation.status === 'update-available') return installed
+    ? t('updateFrom', { version: installed }) : t('update')
+  if (entry.installation.status === 'different-version') return installed
+    ? t('differentVersionValue', { version: installed }) : t('differentVersion')
+  return installed ? t('installedVersion', { version: installed }) : t('installed')
+}
+
+function detailOriginText(origin: 'locale' | 'readme' | 'repository', t: PlazaProps['t']): string {
+  return origin === 'locale' ? t('detailOriginLocale') : origin === 'readme' ? t('detailOriginReadme') : t('detailOriginRepository')
+}
+
+function compatibilityFilterText(filter: PlazaQuery['compatibility'], t: PlazaProps['t']): string {
+  return filter === 'compatible' ? t('compatible') : filter === 'exempted' ? t('compatibilityExempted') : t('incompatible')
+}
+
+function installationFilterText(filter: PlazaQuery['installation'], t: PlazaProps['t']): string {
+  if (filter === 'not-installed') return t('notInstalled')
+  if (filter === 'update-available') return t('update')
+  if (filter === 'different-version') return t('differentVersion')
+  return filter === 'provided' ? t('provided') : t('installed')
 }
 
 function PluginIcon({ entry }: { readonly entry: MarketEntry }) {
@@ -49,7 +86,7 @@ function Card({ entry, onOpen, onInstall, onOpenInstalled, ctx, t, language, lab
         <strong>{resolve(ctx, entry.title, entry.name)}</strong>
         <span className="plaza-package">{entry.name}</span>
         <span className="plaza-description">{resolve(ctx, entry.description, entry.name)}</span>
-        <span className="plaza-meta">{entry.author ? `${entry.author} · ` : ''}{formatDate(version.publishTimestamp, language)}</span>
+        <span className="plaza-meta">{entry.author ? `${entry.author} · ` : ''}{t('versionValue', { version: version.version })} · {formatDate(version.publishTimestamp, language)}</span>
       </span>
     </button>
     <div className="plaza-card-tags">
@@ -58,7 +95,7 @@ function Card({ entry, onOpen, onInstall, onOpenInstalled, ctx, t, language, lab
       {entry.metadata.labels.length > shownLabels.length && <span>+{entry.metadata.labels.length - shownLabels.length}</span>}
     </div>
     <footer>
-      <span>{version.compatibility.compatible ? t('compatible') : version.compatibility.exempted ? t('compatibilityExempted') : t('incompatible')}</span>
+      <span className="plaza-status"><span>{compatibilityText(version, t)}</span><span>{installationText(entry, t)}</span></span>
       {status === 'not-installed'
         ? <button type="button" className="plaza-action" disabled={!versionInstallable(version)} onClick={event => { event.stopPropagation(); onInstall() }}>{t('install')}</button>
         : <button type="button" className="plaza-action" onClick={event => { event.stopPropagation(); onOpenInstalled() }}>{status === 'update-available' ? t('update') : status === 'provided' ? t('provided') : t('installed')}</button>}
@@ -214,6 +251,9 @@ export function Plaza({ ctx, controller, t, install, openPackage }: PlazaProps) 
   const labels = Object.entries(metadata?.labels ?? {})
   const sortKeys = Object.entries(metadata?.sortKeys ?? {})
   const chips = [query.category, ...query.labels].filter(Boolean)
+  const visibleEntries = result === null ? [] : filterEntries(result.entries, query)
+  const usesLocalFilters = query.compatibility !== 'all' || query.installation !== 'all'
+  const currentIndex = state.indexes.find(index => index.url === source)
 
   if (selected !== null) {
     const version = presentedVersion(selected)
@@ -224,39 +264,52 @@ export function Plaza({ ctx, controller, t, install, openPackage }: PlazaProps) 
         ? <button type="button" className="plaza-action" disabled={!versionInstallable(version)} onClick={() => installVersion(selected, version)}>{t('install')}</button>
         : <button type="button" className="plaza-action" onClick={() => openPackage(selected.name)}>{t('openInstalled')}</button>}</header>
       <p>{resolve(ctx, selected.description, '')}</p>
-      {!version.compatibility.compatible && <p className="plaza-notice" role="note">{version.compatibility.exempted ? t('compatibilityExempted') : t('incompatible')}</p>}
-      <div className="plaza-detail-body">{detail?.status === 'loading' || detail === null ? t('detailLoading') : detail.status === 'error' ? <><p>{t(detail.failure === 'timeout' ? 'detailTimeout' : 'detailError')}</p><button onClick={() => void readDetail(selected)}>{t('retry')}</button></> : doc === undefined ? t('noDetail') : <Markdown source={doc.markdown} resolveImage={path => detailImage(doc.document, path)} />}</div>
+      <p className="plaza-trust" role="note">{t('installTrust', { source: resolve(ctx, currentIndex?.title, currentIndex?.url ?? source) })}</p>
+      {!version.compatibility.compatible && <div className="plaza-notice" role="note"><strong>{compatibilityText(version, t)}</strong><span>{t('runtimeVersion', { version: version.compatibility.runtimeVersion })}</span>{Object.entries(version.compatibility.requirements).map(([engine, requirement]) => <span key={engine}>{t('engineRequirement', { engine, requirement })}</span>)}</div>}
+      <dl className="plaza-summary">
+        <div><dt>{t('installationStatus')}</dt><dd>{installationText(selected, t)}</dd></div>
+        <div><dt>{t('recommendedVersion')}</dt><dd>{version.version}</dd></div>
+        <div><dt>{t('compatibility')}</dt><dd>{compatibilityText(version, t)}</dd></div>
+        <div><dt>{t('publishDate')}</dt><dd>{formatDate(version.publishTimestamp, language)}</dd></div>
+      </dl>
+      <div className="plaza-detail-body">{detail?.status === 'loading' || detail === null ? t('detailLoading') : detail.status === 'error' ? <><p>{t(detail.failure === 'timeout' ? 'detailTimeout' : 'detailError')}</p><button onClick={() => void readDetail(selected)}>{t('retry')}</button></> : doc === undefined ? t('noDetail') : <><p className="plaza-detail-origin">{t('detailOrigin', { origin: detailOriginText(doc.origin, t) })}</p><Markdown source={doc.markdown} resolveImage={path => detailImage(doc.document, path)} /></>}</div>
       <section className="plaza-versions" aria-labelledby="plaza-versions-title">
         <h3 id="plaza-versions-title">{t('versions')}</h3>
         <ul>{selected.versions.map(item => {
           const current = selected.installation.installedVersion === item.version
           const offered = selected.installation.status !== 'provided' && !current && versionInstallable(item)
-          return <li key={item.version}><div><strong>{item.version}</strong>{item.version === selected.defaultVersion && <span className="plaza-badge">{t('recommended')}</span>}{current && <span className="plaza-badge">{t('current')}</span>}{!item.compatibility.compatible && item.compatibility.exempted && <span className="plaza-badge">{t('compatibilityExempted')}</span>}<span>{formatDate(item.publishTimestamp, language)}</span><small>{sourceLabel(selected.name, item)}</small></div>{offered && <button type="button" className="plaza-action" onClick={() => installVersion(selected, item)}>{t('installVersion', { version: item.version })}</button>}{!versionInstallable(item) && <span className="plaza-version-status">{t('incompatible')}</span>}</li>
+          return <li key={item.version}><div><strong>{item.version}</strong>{item.version === selected.defaultVersion && <span className="plaza-badge">{t('recommended')}</span>}{current && <span className="plaza-badge">{t('current')}</span>}{item.update && <span className="plaza-badge">{t('gitUpdate')}</span>}{!item.compatibility.compatible && item.compatibility.exempted && <span className="plaza-badge">{t('compatibilityExempted')}</span>}<span>{formatDate(item.publishTimestamp, language)} · {compatibilityText(item, t)}</span>{item.engines.dsh && <small>{t('requiresDsh', { requirement: item.engines.dsh })}</small>}{!item.compatibility.compatible && <small>{t('runtimeVersion', { version: item.compatibility.runtimeVersion })}</small>}<small>{t('packageSource', { source: sourceLabel(selected.name, item) })}</small><small>{t('installTarget', { target: installTargetLabel(item) })}</small></div>{offered && <button type="button" className="plaza-action" onClick={() => installVersion(selected, item)}>{t('installVersion', { version: item.version })}</button>}{!versionInstallable(item) && <span className="plaza-version-status">{t('incompatible')}</span>}</li>
         })}</ul>
       </section>
       <dl className="plaza-facts">
         {selected.author && <div><dt>{t('author')}</dt><dd>{selected.author}</dd></div>}
+        {selected.metadata.category && <div><dt>{t('category')}</dt><dd>{resolve(ctx, metadata?.categories[selected.metadata.category]?.title, selected.metadata.category)}</dd></div>}
+        {selected.metadata.labels.length > 0 && <div><dt>{t('labels')}</dt><dd>{selected.metadata.labels.map(id => resolve(ctx, metadata?.labels[id]?.title, id)).join(', ')}</dd></div>}
+        {selected.metadata.keywords.length > 0 && <div><dt>{t('keywords')}</dt><dd>{selected.metadata.keywords.join(', ')}</dd></div>}
+        {Object.keys(selected.metadata.sortKeys).length > 0 && <div><dt>{t('sortValues')}</dt><dd>{Object.entries(selected.metadata.sortKeys).map(([id, value]) => `${resolve(ctx, metadata?.sortKeys[id]?.title, id)}: ${value}`).join(', ')}</dd></div>}
         {selected.homepage && safeExternal(selected.homepage) && <div><dt>{t('homepage')}</dt><dd><a href={safeExternal(selected.homepage)} target="_blank" rel="noopener noreferrer">{selected.homepage} ↗</a></dd></div>}
-        {selected.repository && safeExternal(selected.repository.url) && <div><dt>{t('sourceCode')}</dt><dd><a href={safeExternal(selected.repository.url)} target="_blank" rel="noopener noreferrer">{selected.repository.url} ↗</a></dd></div>}
+        {selected.repository && safeExternal(selected.repository.url) && <div><dt>{t('sourceCode')}</dt><dd><a href={safeExternal(selected.repository.url)} target="_blank" rel="noopener noreferrer">{selected.repository.url} ↗</a>{selected.repository.directory && <small>{t('repositoryDirectory', { directory: selected.repository.directory })}</small>}</dd></div>}
       </dl>
     </section>
   }
 
   return <section className="plaza" aria-labelledby="plaza-title"><div className="plaza-scroll" ref={scrollRef} onScroll={event => { scrollPosition.current = event.currentTarget.scrollTop }} onPointerUp={rememberScroll} onKeyUp={rememberScroll}>
     <header className="plaza-heading"><div><h2 id="plaza-title">{t('title')} <span className="plaza-version">Beta {PLAZA_VERSION}</span></h2><p>{t('subtitle')}</p></div><div className="plaza-source-controls"><select aria-label={t('source')} value={source} disabled={state.indexes.length === 0} onChange={event => chooseSource(event.target.value)}>{state.indexes.length === 0 && <option value="">{t('noSources')}</option>}{state.indexes.map((index: MarketIndexSummary) => <option value={index.url} key={index.url}>{resolve(ctx, index.title, index.url)}</option>)}</select><button type="button" onClick={() => setEditingSources(value => !value)}>{t('manageSources')}</button></div></header>
-    {editingSources && <section className="plaza-sources" aria-labelledby="plaza-sources-title"><h3 id="plaza-sources-title">{t('sourcesTitle')}</h3><p>{t('sourcesTrust')}</p><ul>{state.indexes.map(index => <li key={index.url}><span>{index.url}</span><button type="button" disabled={savingSource} onClick={() => void removeSource(index.url)}>{t('removeSource')}</button></li>)}</ul><div className="plaza-source-add"><input type="url" value={sourceDraft} onChange={event => setSourceDraft(event.target.value)} placeholder="https://example.com/index.json" aria-label={t('sourceUrl')} /><button type="button" disabled={savingSource || sourceDraft.trim() === ''} onClick={() => void addSource()}>{t('addSource')}</button></div>{sourceError !== null && <p className="plaza-source-error" role="alert">{t(sourceError === 'duplicate' ? 'sourceDuplicate' : sourceError === 'invalid' ? 'sourceInvalid' : sourceError === 'unavailable' ? 'sourceUnavailable' : 'sourceError')}</p>}</section>}
+    {editingSources && <section className="plaza-sources" aria-labelledby="plaza-sources-title"><h3 id="plaza-sources-title">{t('sourcesTitle')}</h3><p>{t('sourcesTrust')}</p><ul>{state.indexes.map(index => <li key={index.url}><div><strong>{resolve(ctx, index.title, index.url)}</strong><span>{index.url}</span>{index.description && <small>{resolve(ctx, index.description, '')}</small>}{index.error && <small className="plaza-source-error">{t('sourceLastError', { error: index.error })}</small>}</div><button type="button" disabled={savingSource} onClick={() => void removeSource(index.url)}>{t('removeSource')}</button></li>)}</ul><div className="plaza-source-add"><input type="url" value={sourceDraft} onChange={event => setSourceDraft(event.target.value)} placeholder="https://example.com/index.json" aria-label={t('sourceUrl')} /><button type="button" disabled={savingSource || sourceDraft.trim() === ''} onClick={() => void addSource()}>{t('addSource')}</button></div>{sourceError !== null && <p className="plaza-source-error" role="alert">{t(sourceError === 'duplicate' ? 'sourceDuplicate' : sourceError === 'invalid' ? 'sourceInvalid' : sourceError === 'unavailable' ? 'sourceUnavailable' : 'sourceError')}</p>}</section>}
     <div className="plaza-toolbar">
       <input type="search" value={draft} onChange={event => setDraft(event.target.value)} placeholder={t('search')} aria-label={t('search')} />
       <select aria-label={t('allCategories')} value={query.category} onChange={event => applyQuery({ ...query, category: event.target.value })}><option value="">{t('allCategories')}</option>{categories.map(([id, item]) => <option key={id} value={id}>{resolve(ctx, item.title, id)}</option>)}</select>
+      <select aria-label={t('compatibilityFilter')} value={query.compatibility} onChange={event => applyQuery({ ...query, compatibility: event.target.value as PlazaQuery['compatibility'] })}><option value="all">{t('allCompatibility')}</option><option value="compatible">{t('compatible')}</option><option value="exempted">{t('compatibilityExempted')}</option><option value="incompatible">{t('incompatible')}</option></select>
+      <select aria-label={t('installationFilter')} value={query.installation} onChange={event => applyQuery({ ...query, installation: event.target.value as PlazaQuery['installation'] })}><option value="all">{t('allInstallation')}</option><option value="not-installed">{t('notInstalled')}</option><option value="installed">{t('installed')}</option><option value="update-available">{t('update')}</option><option value="different-version">{t('differentVersion')}</option><option value="provided">{t('provided')}</option></select>
       <select aria-label={t('sort')} value={query.sort.kind === 'key' ? `key:${query.sort.id}` : query.sort.kind} onChange={event => { const value = event.target.value; applyQuery({ ...query, sort: value.startsWith('key:') ? { kind: 'key', id: value.slice(4), direction: metadata!.sortKeys[value.slice(4)]?.order ?? 'asc' } : value === 'published' ? { kind: 'published', direction: 'desc' } : value === 'relevance' ? { kind: 'relevance' } : { kind: 'index' } }) }}>
         <option value="index">{t('sortIndex')}</option><option value="relevance">{t('sortRelevance')}</option><option value="published">{t('sortNewest')}</option>{sortKeys.map(([id, item]) => <option key={id} value={`key:${id}`}>{resolve(ctx, item.title, id)}</option>)}
       </select>
       <div className="plaza-view" role="group" aria-label={t('view')}><button type="button" aria-label={t('viewGrid')} aria-pressed={view === 'grid'} onClick={() => setView('grid')}>▦</button><button type="button" aria-label={t('viewList')} aria-pressed={view === 'list'} onClick={() => setView('list')}>☷</button></div>
     </div>
     {labels.length > 0 && <fieldset className="plaza-labels"><legend>{t('labels')}</legend>{labels.map(([id, item]) => <label key={id}><input type="checkbox" checked={query.labels.includes(id)} onChange={() => applyQuery({ ...query, labels: toggleLabel(query.labels, id) })} />{resolve(ctx, item.title, id)}</label>)}</fieldset>}
-    {activeFilterCount(query) > 0 && <div className="plaza-chips">{query.text && <button aria-label={t('removeFilter', { name: query.text })} onClick={() => applyQuery(withText(query, ''))}>“{query.text}” ×</button>}{chips.map(chip => <button key={chip} aria-label={t('removeFilter', { name: chip })} onClick={() => applyQuery(chip === query.category ? { ...query, category: '' } : { ...query, labels: query.labels.filter(value => value !== chip) })}>{chip} ×</button>)}<button onClick={() => applyQuery(INITIAL_QUERY)}>{t('clear')}</button></div>}
-    <div className="plaza-result-meta" aria-live="polite">{result && t('results', { count: result.total })}</div>
-    {status === 'error' ? <div className="plaza-state">{t('error')}<button onClick={() => void controller.load(source, query, Math.max(PAGE_SIZE, result?.entries.length ?? PAGE_SIZE))}>{t('retry')}</button></div> : status === 'loading' && !result ? <div className="plaza-state">{t('loading')}</div> : status === 'empty' || result?.entries.length === 0 ? <div className="plaza-state">{t('empty')}</div> : <div className={view === 'grid' ? 'plaza-grid' : 'plaza-list'}>{result?.entries.map(entry => <Card key={entry.name} entry={entry} onOpen={() => void openDetail(entry, document.activeElement as HTMLElement)} onInstall={() => installVersion(entry, presentedVersion(entry))} onOpenInstalled={() => openPackage(entry.name)} ctx={ctx} t={t} language={language} labels={metadata?.labels ?? {}} category={entry.metadata.category ? metadata?.categories[entry.metadata.category]?.title : undefined} />)}</div>}
+    {activeFilterCount(query) > 0 && <div className="plaza-chips">{query.text && <button aria-label={t('removeFilter', { name: query.text })} onClick={() => applyQuery(withText(query, ''))}>“{query.text}” ×</button>}{chips.map(chip => <button key={chip} aria-label={t('removeFilter', { name: chip })} onClick={() => applyQuery(chip === query.category ? { ...query, category: '' } : { ...query, labels: query.labels.filter(value => value !== chip) })}>{chip} ×</button>)}{query.compatibility !== 'all' && <button onClick={() => applyQuery({ ...query, compatibility: 'all' })}>{compatibilityFilterText(query.compatibility, t)} ×</button>}{query.installation !== 'all' && <button onClick={() => applyQuery({ ...query, installation: 'all' })}>{installationFilterText(query.installation, t)} ×</button>}<button onClick={() => applyQuery(INITIAL_QUERY)}>{t('clear')}</button></div>}
+    <div className="plaza-result-meta" aria-live="polite">{result && (usesLocalFilters ? t('filteredResults', { visible: visibleEntries.length, total: result.total }) : t('results', { count: result.total }))}{result && <span>{t('indexFetchedAt', { date: formatDateTime(result.fetchedAt, language) })}</span>}</div>
+    {status === 'error' ? <div className="plaza-state">{t('error')}<button onClick={() => void controller.load(source, query, Math.max(PAGE_SIZE, result?.entries.length ?? PAGE_SIZE))}>{t('retry')}</button></div> : status === 'loading' && !result ? <div className="plaza-state">{t('loading')}</div> : status === 'empty' || visibleEntries.length === 0 ? <div className="plaza-state">{t('empty')}</div> : <div className={view === 'grid' ? 'plaza-grid' : 'plaza-list'}>{visibleEntries.map(entry => <Card key={entry.name} entry={entry} onOpen={() => void openDetail(entry, document.activeElement as HTMLElement)} onInstall={() => installVersion(entry, presentedVersion(entry))} onOpenInstalled={() => openPackage(entry.name)} ctx={ctx} t={t} language={language} labels={metadata?.labels ?? {}} category={entry.metadata.category ? metadata?.categories[entry.metadata.category]?.title : undefined} />)}</div>}
     {result?.nextOffset != null && <button className="plaza-more" type="button" disabled={status === 'more'} onClick={() => void showMore()}>{status === 'more' ? t('loading') : t('more')}</button>}
   </div></section>
 }

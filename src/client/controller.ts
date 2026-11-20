@@ -6,6 +6,10 @@ import type { PlazaQuery } from './query.js'
 export const PAGE_SIZE = 50
 const MAX_PAGE_SIZE = 100
 
+function hasLocalFilters(query: PlazaQuery): boolean {
+  return query.compatibility !== 'all' || query.installation !== 'all'
+}
+
 export interface ListingState {
   readonly url: string
   readonly query: PlazaQuery
@@ -85,9 +89,10 @@ export class PlazaController {
     this.patch({ listing: { url, query, status: 'loading', value: kept, answeredQuery } })
     let value: MarketSearchResult | null = null
     let restarted = false
-    while (value === null || (value.entries.length < count && value.nextOffset !== null)) {
+    while (value === null || (value.nextOffset !== null && (hasLocalFilters(query) || value.entries.length < count))) {
       const offset = value?.entries.length ?? 0
-      const answer = await this.page(url, query, offset, Math.min(MAX_PAGE_SIZE, count - offset), value?.fetchedAt, refresh && value === null && !restarted)
+      const remaining = hasLocalFilters(query) ? MAX_PAGE_SIZE : count - offset
+      const answer = await this.page(url, query, offset, Math.min(MAX_PAGE_SIZE, remaining), value?.fetchedAt, refresh && value === null && !restarted)
       if (!this.current(read, this.listingRead)) return
       if (!answer.ok) { this.patch({ listing: { url, query, status: 'error', value: kept, answeredQuery } }); return }
       if (value === null || answer.value.fetchedAt === value.fetchedAt) {

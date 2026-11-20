@@ -1,5 +1,7 @@
 import type { MarketSort } from './contracts.js'
-import { INITIAL_QUERY, type PlazaQuery, type ViewMode } from './query.js'
+import {
+  INITIAL_QUERY, type CompatibilityFilter, type InstallationFilter, type PlazaQuery, type ViewMode,
+} from './query.js'
 
 const PREFERENCES_KEY = 'dsh-plaza:preferences:v1'
 const MAX_LOADED = 5000
@@ -26,6 +28,15 @@ function validSort(value: unknown): value is MarketSort {
   return sort.kind === 'key' && typeof sort.id === 'string' && (sort.direction === 'asc' || sort.direction === 'desc')
 }
 
+function validCompatibility(value: unknown): value is CompatibilityFilter {
+  return value === 'all' || value === 'compatible' || value === 'exempted' || value === 'incompatible'
+}
+
+function validInstallation(value: unknown): value is InstallationFilter {
+  return value === 'all' || value === 'not-installed' || value === 'installed' || value === 'update-available'
+    || value === 'different-version' || value === 'provided'
+}
+
 function readSource(value: unknown): SourcePreference | undefined {
   if (typeof value !== 'object' || value === null) return undefined
   const source = value as Record<string, unknown>
@@ -35,7 +46,18 @@ function readSource(value: unknown): SourcePreference | undefined {
   const loadedCount = typeof source.loadedCount === 'number' && Number.isInteger(source.loadedCount)
     ? Math.min(MAX_LOADED, Math.max(50, source.loadedCount)) : 50
   const scrollY = typeof source.scrollY === 'number' && Number.isFinite(source.scrollY) ? Math.max(0, source.scrollY) : 0
-  return { query: { text: query.text, category: query.category, labels: query.labels as string[], sort: query.sort }, loadedCount, scrollY }
+  return {
+    query: {
+      text: query.text,
+      category: query.category,
+      labels: query.labels as string[],
+      compatibility: validCompatibility(query.compatibility) ? query.compatibility : 'all',
+      installation: validInstallation(query.installation) ? query.installation : 'all',
+      sort: query.sort,
+    },
+    loadedCount,
+    scrollY,
+  }
 }
 
 export function readPreferences(storage: Pick<Storage, 'getItem'>): PlazaPreferences {

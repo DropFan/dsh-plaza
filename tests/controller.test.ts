@@ -91,6 +91,33 @@ describe('PlazaController', () => {
     expect(controller.getSnapshot().listing?.value?.entries.map(entry => entry.name)).toEqual(['first', 'second'])
   })
 
+  it('loads every server page before applying a local installation filter', async () => {
+    const { controller, search } = setup()
+    search
+      .mockResolvedValueOnce(ok(result(['first-page'], 10, 1)))
+      .mockResolvedValueOnce(ok(result(['installed-on-later-page'], 10, null)))
+
+    await controller.load('https://example.test/index.json', { ...INITIAL_QUERY, installation: 'installed' })
+
+    expect(search).toHaveBeenCalledTimes(2)
+    expect(search).toHaveBeenNthCalledWith(1, 'https://example.test/index.json', expect.objectContaining({ offset: 0, limit: 100 }))
+    expect(search).toHaveBeenNthCalledWith(2, 'https://example.test/index.json', expect.objectContaining({ offset: 1, limit: 100, fetchedAt: 10 }))
+    expect(controller.getSnapshot().listing?.value?.entries.map(entry => entry.name)).toEqual(['first-page', 'installed-on-later-page'])
+    expect(controller.getSnapshot().listing?.value?.nextOffset).toBeNull()
+  })
+
+  it('loads every server page before applying a local compatibility filter', async () => {
+    const { controller, search } = setup()
+    search
+      .mockResolvedValueOnce(ok(result(['first-page'], 10, 1)))
+      .mockResolvedValueOnce(ok(result(['incompatible-on-later-page'], 10, null)))
+
+    await controller.load('https://example.test/index.json', { ...INITIAL_QUERY, compatibility: 'incompatible' })
+
+    expect(search).toHaveBeenCalledTimes(2)
+    expect(controller.getSnapshot().listing?.value?.nextOffset).toBeNull()
+  })
+
   it('reloads from the first page instead of merging when more sees a replaced document', async () => {
     const { controller, search } = setup()
     const stalePage = Array.from({ length: PAGE_SIZE }, (_, index) => `stale-${index}`)

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { presentedVersion, requestInstall, sourceLabel, versionInstallable } from '../src/client/install.js'
+import { installTargetLabel, presentedVersion, requestInstall, sourceLabel, versionInstallable } from '../src/client/install.js'
 import type { MarketEntry } from '../src/client/contracts.js'
 
 function version(value: string, options: { compatible?: boolean; exempted?: boolean; source?: 'npm' | 'git' } = {}) {
@@ -49,7 +49,8 @@ describe('install adapter', () => {
   })
 
   it('describes npm and pinned git sources', () => {
-    expect(sourceLabel('plugin', version('1.0.0'))).toContain('plugin@1.0.0')
-    expect(sourceLabel('plugin', version('1.0.0', { source: 'git' }))).toBe('https://github.com/example/plugin.git#1234567890ab/packages/plugin')
+    expect(sourceLabel('plugin', version('1.0.0'))).toContain('npm · plugin@1.0.0')
+    expect(sourceLabel('plugin', version('1.0.0', { source: 'git' }))).toBe('git · https://github.com/example/plugin.git#1234567890abcdef1234567890abcdef12345678/packages/plugin')
+    expect(installTargetLabel(version('1.0.0'))).toBe('plugin@1.0.0 · https://registry.example/')
   })
 })

@@ -33155,6 +33155,9 @@ function Markdown({ source, resolveImage }) {
 //#region src/client/controller.ts
 const PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
+function hasLocalFilters(query) {
+	return query.compatibility !== "all" || query.installation !== "all";
+}
 const DETAIL_TIMEOUT_MS = 7e4;
 const INITIAL = {
 	indexes: [],
@@ -33224,9 +33227,10 @@ var PlazaController = class {
 		} });
 		let value = null;
 		let restarted = false;
-		while (value === null || value.entries.length < count && value.nextOffset !== null) {
+		while (value === null || value.nextOffset !== null && (hasLocalFilters(query) || value.entries.length < count)) {
 			const offset = value?.entries.length ?? 0;
-			const answer = await this.page(url, query, offset, Math.min(MAX_PAGE_SIZE, count - offset), value?.fetchedAt, refresh && value === null && !restarted);
+			const remaining = hasLocalFilters(query) ? MAX_PAGE_SIZE : count - offset;
+			const answer = await this.page(url, query, offset, Math.min(MAX_PAGE_SIZE, remaining), value?.fetchedAt, refresh && value === null && !restarted);
 			if (!this.current(read, this.listingRead)) return;
 			if (!answer.ok) {
 				this.patch({ listing: {
@@ -33366,10 +33370,23 @@ const INITIAL_QUERY = {
 	text: "",
 	category: "",
 	labels: [],
+	compatibility: "all",
+	installation: "all",
 	sort: { kind: "index" }
 };
 function activeFilterCount(query) {
-	return Number(query.text.length > 0) + Number(query.category.length > 0) + query.labels.length;
+	return Number(query.text.length > 0) + Number(query.category.length > 0) + query.labels.length + Number(query.compatibility !== "all") + Number(query.installation !== "all");
+}
+function filterEntries(entries, query) {
+	return entries.filter((entry) => {
+		const version$1 = entry.versions.find((item) => item.version === entry.defaultVersion) ?? entry.versions[0];
+		if (query.installation !== "all" && entry.installation.status !== query.installation) return false;
+		if (query.compatibility === "all") return true;
+		if (version$1 === void 0) return false;
+		if (query.compatibility === "compatible") return version$1.compatibility.compatible;
+		if (version$1.compatibility.compatible) return false;
+		return query.compatibility === "exempted" ? version$1.compatibility.exempted : !version$1.compatibility.exempted;
+	});
 }
 function toggleLabel(labels, label) {
 	return labels.includes(label) ? labels.filter((value) => value !== label) : [...labels, label];
@@ -33411,6 +33428,12 @@ function validSort(value) {
 	if (sort.kind === "published") return sort.direction === "asc" || sort.direction === "desc";
 	return sort.kind === "key" && typeof sort.id === "string" && (sort.direction === "asc" || sort.direction === "desc");
 }
+function validCompatibility(value) {
+	return value === "all" || value === "compatible" || value === "exempted" || value === "incompatible";
+}
+function validInstallation(value) {
+	return value === "all" || value === "not-installed" || value === "installed" || value === "update-available" || value === "different-version" || value === "provided";
+}
 function readSource(value) {
 	if (typeof value !== "object" || value === null) return void 0;
 	const source = value;
@@ -33423,6 +33446,8 @@ function readSource(value) {
 			text: query.text,
 			category: query.category,
 			labels: query.labels,
+			compatibility: validCompatibility(query.compatibility) ? query.compatibility : "all",
+			installation: validInstallation(query.installation) ? query.installation : "all",
 			sort: query.sort
 		},
 		loadedCount,
@@ -33476,7 +33501,7 @@ function updateSourcePreference(preferences, url, patch$4) {
 
 //#endregion
 //#region src/client/plaza.css?dsh-inline
-var plaza_default = ".plaza,.plaza-detail{box-sizing:border-box;width:100%;height:100%;min-height:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1)}.plaza-scroll{box-sizing:border-box;scrollbar-gutter:stable;height:100%;padding:24px clamp(16px,3vw,36px) 40px;overflow:auto}.plaza-heading,.plaza-toolbar,.plaza-card footer,.plaza-detail header{align-items:center;display:flex}.plaza-heading{justify-content:space-between;gap:16px;margin-bottom:20px}.plaza-heading h2,.plaza-detail h2{margin:0;font-size:24px}.plaza-version{vertical-align:middle;border:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);border-radius:999px;padding:2px 7px;font-size:11px;font-weight:400}.plaza-heading p,.plaza-detail header p{color:var(--dsw-alias-label-secondary);margin:4px 0 0}.plaza select,.plaza input,.plaza button,.plaza-detail button{font:inherit;color:inherit}.plaza select,.plaza input{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);border-radius:10px;height:36px;padding:0 12px}.plaza-source-controls{align-items:center;gap:8px;display:flex}.plaza-source-controls button,.plaza-sources button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:8px;height:36px;padding:0 12px}.plaza-sources{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:12px;margin-bottom:16px;padding:14px}.plaza-sources h3{margin:0}.plaza-sources p{color:var(--dsw-alias-label-secondary);margin:6px 0 12px;font-size:13px}.plaza-sources ul{gap:6px;margin:0 0 10px;padding:0;list-style:none;display:grid}.plaza-sources li{justify-content:space-between;align-items:center;gap:8px;display:flex}.plaza-sources li span{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.plaza-source-add{gap:8px;display:flex}.plaza-source-add input{flex:1}.plaza-sources .plaza-source-error{color:var(--dsw-alias-state-error-primary)}.plaza-toolbar{flex-wrap:wrap;gap:8px}.plaza-toolbar input{flex:240px}.plaza-toolbar select{flex:0 180px}.plaza-view{border:.5px solid var(--dsw-alias-border-l3);border-radius:10px;display:flex;overflow:hidden}.plaza-view button{background:0 0;border:0;width:36px;height:34px}.plaza-view button[aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover)}.plaza-labels{border:0;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;display:flex}.plaza-labels legend{float:left;color:var(--dsw-alias-label-secondary);margin-right:8px}.plaza-labels label{font-size:13px}.plaza-chips{flex-wrap:wrap;gap:6px;margin-top:12px;display:flex}.plaza-chips button,.plaza-more,.plaza-state button,.plaza-back,.plaza-detail-body button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:999px;padding:5px 10px}.plaza-result-meta{min-height:20px;color:var(--dsw-alias-label-secondary);margin:18px 0 10px;font-size:13px}.plaza-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));grid-auto-rows:1fr;gap:12px;display:grid}.plaza-list{grid-template-columns:1fr;gap:8px;display:grid}.plaza-card{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:14px;flex-direction:column;min-width:0;min-height:230px;display:flex;overflow:hidden}.plaza-list .plaza-card{min-height:0}.plaza-card-main{text-align:left;cursor:pointer;background:0 0;border:0;flex:1;gap:12px;width:100%;padding:16px;display:flex}.plaza-icon{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);width:42px;height:42px;color:var(--dsw-alias-link);border-radius:11px;flex:0 0 42px;place-items:center;font-weight:700;display:grid;overflow:hidden}.plaza-icon img{object-fit:contain;width:36px;height:36px;display:block}.plaza-card-copy{flex-direction:column;min-width:0;display:flex}.plaza-package{color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;font-size:12px;overflow:hidden}.plaza-description{color:var(--dsw-alias-label-secondary);-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-top:10px;font-size:13px;line-height:19px;display:-webkit-box;overflow:hidden}.plaza-meta{color:var(--dsw-alias-label-tertiary);margin-top:8px;font-size:12px}.plaza-card-tags{gap:5px;min-height:24px;padding:0 16px;display:flex}.plaza-card-tags span{background:var(--dsw-alias-interactive-bg-hover);border-radius:5px;padding:2px 6px;font-size:11px}.plaza-card footer{border-top:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);justify-content:space-between;margin-top:10px;padding:10px 16px;font-size:12px}.plaza-action{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:8px;padding:5px 10px}.plaza-action:disabled{cursor:not-allowed;opacity:.5}.plaza-more{margin:18px auto;display:block}.plaza-state{min-height:220px;color:var(--dsw-alias-label-secondary);place-items:center;gap:12px;display:grid}.plaza-detail{padding:24px clamp(16px,4vw,48px);overflow:auto}.plaza-detail header{gap:14px;margin:24px 0}.plaza-detail-heading{flex:1;min-width:0}.plaza-detail-body{border-top:.5px solid var(--dsw-alias-border-l3);max-width:900px;margin-top:20px;padding-top:20px}.plaza-back{border-radius:8px}.plaza-notice{border:.5px solid var(--dsw-alias-state-warn-primary);max-width:900px;color:var(--dsw-alias-state-warn-primary);border-radius:8px;padding:10px}.plaza-markdown{overflow-wrap:anywhere;line-height:1.65}.plaza-markdown>:first-child{margin-top:0}.plaza-markdown>:last-child{margin-bottom:0}.plaza-markdown img{border-radius:8px;max-width:100%;height:auto;margin:12px 0;display:block}.plaza-markdown pre{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:8px;padding:12px;overflow:auto}.plaza-markdown code,.plaza-markdown kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.plaza-markdown :not(pre)>code,.plaza-markdown kbd{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:5px;padding:1px 5px;font-size:.9em}.plaza-markdown blockquote{border-left:3px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);margin-inline:0;padding-left:14px}.plaza-markdown table{border-spacing:0;border-collapse:collapse;max-width:100%;display:block;overflow:auto}.plaza-markdown th,.plaza-markdown td{border:.5px solid var(--dsw-alias-border-l2);text-align:left;padding:6px 12px}.plaza-markdown th{background:var(--dsw-alias-bg-module-platform)}.plaza-markdown details{border:.5px solid var(--dsw-alias-border-l2);border-radius:8px;margin:12px 0;padding:8px 12px}.plaza-markdown summary{cursor:pointer;font-weight:500}.plaza-markdown input[type=checkbox]{margin-right:7px}.plaza-markdown a,.plaza-facts a{color:var(--dsw-alias-link)}.plaza-versions{max-width:900px;margin-top:28px}.plaza-versions h3{margin-bottom:10px}.plaza-versions ul{gap:8px;margin:0;padding:0;list-style:none;display:grid}.plaza-versions li{border:.5px solid var(--dsw-alias-border-l2);border-radius:8px;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;display:flex}.plaza-versions li>div{flex-wrap:wrap;align-items:center;gap:8px;min-width:0;display:flex}.plaza-versions small{width:100%;color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere}.plaza-badge{background:var(--dsw-alias-interactive-bg-hover);border-radius:999px;padding:2px 7px;font-size:11px}.plaza-version-status{color:var(--dsw-alias-state-warn-primary);font-size:12px}.plaza-facts{gap:10px;max-width:900px;margin-top:28px;display:grid}.plaza-facts div{grid-template-columns:minmax(100px,160px) 1fr;gap:12px;display:grid}.plaza-facts dt{color:var(--dsw-alias-label-secondary)}.plaza-facts dd{overflow-wrap:anywhere;margin:0}.plaza button:focus-visible,.plaza input:focus-visible,.plaza select:focus-visible,.plaza-detail button:focus-visible,.plaza-detail a:focus-visible{outline:2px solid var(--dsw-alias-link);outline-offset:2px}@media (hover:hover){.plaza-card-main:hover,.plaza-chips button:hover,.plaza-more:hover,.plaza-back:hover,.plaza-action:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}}@media (width<=640px){.plaza-scroll,.plaza-detail{padding:16px 12px 32px}.plaza-heading,.plaza-source-controls,.plaza-source-add{flex-direction:column;align-items:stretch}.plaza-source-controls>*{width:100%}.plaza-sources li{flex-direction:column;align-items:stretch}.plaza-toolbar>*{flex:100%!important}.plaza-grid{grid-template-columns:1fr}.plaza-card{min-height:210px}.plaza-facts div{grid-template-columns:1fr;gap:2px}}@media (prefers-reduced-motion:reduce){.plaza *{scroll-behavior:auto!important}}";
+var plaza_default = ".plaza,.plaza-detail{box-sizing:border-box;width:100%;height:100%;min-height:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1)}.plaza-scroll{box-sizing:border-box;scrollbar-gutter:stable;height:100%;padding:24px clamp(16px,3vw,36px) 40px;overflow:auto}.plaza-heading,.plaza-toolbar,.plaza-card footer,.plaza-detail header{align-items:center;display:flex}.plaza-heading{justify-content:space-between;gap:16px;margin-bottom:20px}.plaza-heading h2,.plaza-detail h2{margin:0;font-size:24px}.plaza-version{vertical-align:middle;border:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);border-radius:999px;padding:2px 7px;font-size:11px;font-weight:400}.plaza-heading p,.plaza-detail header p{color:var(--dsw-alias-label-secondary);margin:4px 0 0}.plaza select,.plaza input,.plaza button,.plaza-detail button{font:inherit;color:inherit}.plaza select,.plaza input{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);border-radius:10px;height:36px;padding:0 12px}.plaza-source-controls{align-items:center;gap:8px;display:flex}.plaza-source-controls button,.plaza-sources button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:8px;height:36px;padding:0 12px}.plaza-sources{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:12px;margin-bottom:16px;padding:14px}.plaza-sources h3{margin:0}.plaza-sources p{color:var(--dsw-alias-label-secondary);margin:6px 0 12px;font-size:13px}.plaza-sources ul{gap:6px;margin:0 0 10px;padding:0;list-style:none;display:grid}.plaza-sources li{justify-content:space-between;align-items:center;gap:8px;display:flex}.plaza-sources li span{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.plaza-source-add{gap:8px;display:flex}.plaza-source-add input{flex:1}.plaza-sources .plaza-source-error{color:var(--dsw-alias-state-error-primary)}.plaza-toolbar{flex-wrap:wrap;gap:8px}.plaza-toolbar input{flex:240px}.plaza-toolbar select{flex:0 180px}.plaza-view{border:.5px solid var(--dsw-alias-border-l3);border-radius:10px;display:flex;overflow:hidden}.plaza-view button{background:0 0;border:0;width:36px;height:34px}.plaza-view button[aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover)}.plaza-labels{border:0;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;display:flex}.plaza-labels legend{float:left;color:var(--dsw-alias-label-secondary);margin-right:8px}.plaza-labels label{font-size:13px}.plaza-chips{flex-wrap:wrap;gap:6px;margin-top:12px;display:flex}.plaza-chips button,.plaza-more,.plaza-state button,.plaza-back,.plaza-detail-body button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:999px;padding:5px 10px}.plaza-result-meta{min-height:20px;color:var(--dsw-alias-label-secondary);margin:18px 0 10px;font-size:13px}.plaza-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));grid-auto-rows:1fr;gap:12px;display:grid}.plaza-list{grid-template-columns:1fr;gap:8px;display:grid}.plaza-card{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:14px;flex-direction:column;min-width:0;min-height:230px;display:flex;overflow:hidden}.plaza-list .plaza-card{min-height:0}.plaza-card-main{text-align:left;cursor:pointer;background:0 0;border:0;flex:1;gap:12px;width:100%;padding:16px;display:flex}.plaza-icon{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);width:42px;height:42px;color:var(--dsw-alias-link);border-radius:11px;flex:0 0 42px;place-items:center;font-weight:700;display:grid;overflow:hidden}.plaza-icon img{object-fit:contain;width:36px;height:36px;display:block}.plaza-card-copy{flex-direction:column;min-width:0;display:flex}.plaza-package{color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;font-size:12px;overflow:hidden}.plaza-description{color:var(--dsw-alias-label-secondary);-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-top:10px;font-size:13px;line-height:19px;display:-webkit-box;overflow:hidden}.plaza-meta{color:var(--dsw-alias-label-tertiary);margin-top:8px;font-size:12px}.plaza-card-tags{gap:5px;min-height:24px;padding:0 16px;display:flex}.plaza-card-tags span{background:var(--dsw-alias-interactive-bg-hover);border-radius:5px;padding:2px 6px;font-size:11px}.plaza-card footer{border-top:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);justify-content:space-between;margin-top:10px;padding:10px 16px;font-size:12px}.plaza-action{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:8px;padding:5px 10px}.plaza-action:disabled{cursor:not-allowed;opacity:.5}.plaza-more{margin:18px auto;display:block}.plaza-state{min-height:220px;color:var(--dsw-alias-label-secondary);place-items:center;gap:12px;display:grid}.plaza-detail{padding:24px clamp(16px,4vw,48px);overflow:auto}.plaza-detail header{gap:14px;margin:24px 0}.plaza-detail-heading{flex:1;min-width:0}.plaza-detail-body{border-top:.5px solid var(--dsw-alias-border-l3);max-width:900px;margin-top:20px;padding-top:20px}.plaza-back{border-radius:8px}.plaza-notice{border:.5px solid var(--dsw-alias-state-warn-primary);max-width:900px;color:var(--dsw-alias-state-warn-primary);border-radius:8px;padding:10px}.plaza-markdown{overflow-wrap:anywhere;line-height:1.65}.plaza-markdown>:first-child{margin-top:0}.plaza-markdown>:last-child{margin-bottom:0}.plaza-markdown img{border-radius:8px;max-width:100%;height:auto;margin:12px 0;display:block}.plaza-markdown pre{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:8px;padding:12px;overflow:auto}.plaza-markdown code,.plaza-markdown kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.plaza-markdown :not(pre)>code,.plaza-markdown kbd{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:5px;padding:1px 5px;font-size:.9em}.plaza-markdown blockquote{border-left:3px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);margin-inline:0;padding-left:14px}.plaza-markdown table{border-spacing:0;border-collapse:collapse;max-width:100%;display:block;overflow:auto}.plaza-markdown th,.plaza-markdown td{border:.5px solid var(--dsw-alias-border-l2);text-align:left;padding:6px 12px}.plaza-markdown th{background:var(--dsw-alias-bg-module-platform)}.plaza-markdown details{border:.5px solid var(--dsw-alias-border-l2);border-radius:8px;margin:12px 0;padding:8px 12px}.plaza-markdown summary{cursor:pointer;font-weight:500}.plaza-markdown input[type=checkbox]{margin-right:7px}.plaza-markdown a,.plaza-facts a{color:var(--dsw-alias-link)}.plaza-versions{max-width:900px;margin-top:28px}.plaza-versions h3{margin-bottom:10px}.plaza-versions ul{gap:8px;margin:0;padding:0;list-style:none;display:grid}.plaza-versions li{border:.5px solid var(--dsw-alias-border-l2);border-radius:8px;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;display:flex}.plaza-versions li>div{flex-wrap:wrap;align-items:center;gap:8px;min-width:0;display:flex}.plaza-versions small{width:100%;color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere}.plaza-badge{background:var(--dsw-alias-interactive-bg-hover);border-radius:999px;padding:2px 7px;font-size:11px}.plaza-version-status{color:var(--dsw-alias-state-warn-primary);font-size:12px}.plaza-facts{gap:10px;max-width:900px;margin-top:28px;display:grid}.plaza-facts div{grid-template-columns:minmax(100px,160px) 1fr;gap:12px;display:grid}.plaza-facts dt{color:var(--dsw-alias-label-secondary)}.plaza-facts dd{overflow-wrap:anywhere;margin:0}.plaza button:focus-visible,.plaza input:focus-visible,.plaza select:focus-visible,.plaza-detail button:focus-visible,.plaza-detail a:focus-visible{outline:2px solid var(--dsw-alias-link);outline-offset:2px}@media (hover:hover){.plaza-card-main:hover,.plaza-chips button:hover,.plaza-more:hover,.plaza-back:hover,.plaza-action:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}}.plaza-status{gap:2px;display:grid}.plaza-status span:last-child{color:var(--dsw-alias-label-tertiary)}.plaza-result-meta{flex-wrap:wrap;justify-content:space-between;gap:12px;display:flex}.plaza-sources li>div{gap:2px;min-width:0;display:grid}.plaza-sources li>div span,.plaza-sources li>div small{overflow-wrap:anywhere;min-width:0;color:var(--dsw-alias-label-secondary)}.plaza-trust{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);max-width:900px;color:var(--dsw-alias-label-secondary);border-radius:8px;padding:10px;font-size:13px}.plaza-notice{gap:4px;display:grid}.plaza-summary{border:.5px solid var(--dsw-alias-border-l2);border-radius:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));max-width:900px;margin:20px 0 0;display:grid;overflow:hidden}.plaza-summary div{padding:10px 12px}.plaza-summary dt{color:var(--dsw-alias-label-secondary);font-size:12px}.plaza-summary dd{margin:4px 0 0;font-weight:500}.plaza-detail-origin{color:var(--dsw-alias-label-tertiary);font-size:12px}.plaza-facts dd small{color:var(--dsw-alias-label-secondary);margin-top:4px;display:block}@media (width<=640px){.plaza-scroll,.plaza-detail{padding:16px 12px 32px}.plaza-heading,.plaza-source-controls,.plaza-source-add{flex-direction:column;align-items:stretch}.plaza-source-controls>*{width:100%}.plaza-sources li{flex-direction:column;align-items:stretch}.plaza-toolbar>*{flex:100%!important}.plaza-grid{grid-template-columns:1fr}.plaza-card{min-height:210px}.plaza-facts div{grid-template-columns:1fr;gap:2px}.plaza-result-meta{display:grid}.plaza-summary{grid-template-columns:1fr 1fr}}@media (prefers-reduced-motion:reduce){.plaza *{scroll-behavior:auto!important}}";
 
 //#endregion
 //#region package.json
@@ -33520,8 +33545,11 @@ function requestInstall(install, entry, version$1, title) {
 	return true;
 }
 function sourceLabel(name$1, version$1) {
-	if (version$1.source.type === "npm") return version$1.source.registry === void 0 ? `${name$1}@${version$1.version}` : `${name$1}@${version$1.version} · ${version$1.source.registry}`;
-	return `${version$1.source.url}#${version$1.source.commit.slice(0, 12)}${version$1.source.path ? `/${version$1.source.path}` : ""}`;
+	if (version$1.source.type === "npm") return version$1.source.registry === void 0 ? `npm · ${name$1}@${version$1.version}` : `npm · ${name$1}@${version$1.version} · ${version$1.source.registry}`;
+	return `git · ${version$1.source.url}#${version$1.source.commit}${version$1.source.path ? `/${version$1.source.path}` : ""}`;
+}
+function installTargetLabel(version$1) {
+	return version$1.install.registry === void 0 ? version$1.install.spec : `${version$1.install.spec} · ${version$1.install.registry}`;
 }
 
 //#endregion
@@ -33531,6 +33559,36 @@ function resolve(ctx, value, fallback) {
 }
 function formatDate(timestamp, language) {
 	return new Intl.DateTimeFormat(language, { dateStyle: "medium" }).format(/* @__PURE__ */ new Date(timestamp * 1e3));
+}
+function formatDateTime(timestamp, language) {
+	return new Intl.DateTimeFormat(language, {
+		dateStyle: "medium",
+		timeStyle: "short"
+	}).format(new Date(timestamp));
+}
+function compatibilityText(version$1, t) {
+	if (version$1.compatibility.compatible) return t("compatible");
+	return version$1.compatibility.exempted ? t("compatibilityExempted") : t("incompatible");
+}
+function installationText(entry, t) {
+	const installed = entry.installation.installedVersion;
+	if (entry.installation.status === "not-installed") return t("notInstalled");
+	if (entry.installation.status === "provided") return t("provided");
+	if (entry.installation.status === "update-available") return installed ? t("updateFrom", { version: installed }) : t("update");
+	if (entry.installation.status === "different-version") return installed ? t("differentVersionValue", { version: installed }) : t("differentVersion");
+	return installed ? t("installedVersion", { version: installed }) : t("installed");
+}
+function detailOriginText(origin, t) {
+	return origin === "locale" ? t("detailOriginLocale") : origin === "readme" ? t("detailOriginReadme") : t("detailOriginRepository");
+}
+function compatibilityFilterText(filter, t) {
+	return filter === "compatible" ? t("compatible") : filter === "exempted" ? t("compatibilityExempted") : t("incompatible");
+}
+function installationFilterText(filter, t) {
+	if (filter === "not-installed") return t("notInstalled");
+	if (filter === "update-available") return t("update");
+	if (filter === "different-version") return t("differentVersion");
+	return filter === "provided" ? t("provided") : t("installed");
 }
 function PluginIcon({ entry }) {
 	const [failed, setFailed] = (0, react.useState)(false);
@@ -33573,7 +33631,12 @@ function Card({ entry, onOpen, onInstall, onOpenInstalled, ctx, t, language, lab
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 							className: "plaza-meta",
-							children: [entry.author ? `${entry.author} · ` : "", formatDate(version$1.publishTimestamp, language)]
+							children: [
+								entry.author ? `${entry.author} · ` : "",
+								t("versionValue", { version: version$1.version }),
+								" · ",
+								formatDate(version$1.publishTimestamp, language)
+							]
 						})
 					]
 				})]
@@ -33586,7 +33649,10 @@ function Card({ entry, onOpen, onInstall, onOpenInstalled, ctx, t, language, lab
 					entry.metadata.labels.length > shownLabels.length && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: ["+", entry.metadata.labels.length - shownLabels.length] })
 				]
 			}),
-			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("footer", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: version$1.compatibility.compatible ? t("compatible") : version$1.compatibility.exempted ? t("compatibilityExempted") : t("incompatible") }), status === "not-installed" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("footer", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+				className: "plaza-status",
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: compatibilityText(version$1, t) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: installationText(entry, t) })]
+			}), status === "not-installed" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 				type: "button",
 				className: "plaza-action",
 				disabled: !versionInstallable(version$1),
@@ -33846,6 +33912,9 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 	const labels = Object.entries(metadata?.labels ?? {});
 	const sortKeys = Object.entries(metadata?.sortKeys ?? {});
 	const chips = [query.category, ...query.labels].filter(Boolean);
+	const visibleEntries = result === null ? [] : filterEntries(result.entries, query);
+	const usesLocalFilters = query.compatibility !== "all" || query.installation !== "all";
+	const currentIndex = state.indexes.find((index$2) => index$2.url === source);
 	if (selected !== null) {
 		const version$1 = presentedVersion(selected);
 		const doc = detail?.status === "ready" && detail.detail.status === "found" ? detail.detail : void 0;
@@ -33887,20 +33956,44 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 					})
 				] }),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: resolve(ctx, selected.description, "") }),
-				!version$1.compatibility.compatible && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+					className: "plaza-trust",
+					role: "note",
+					children: t("installTrust", { source: resolve(ctx, currentIndex?.title, currentIndex?.url ?? source) })
+				}),
+				!version$1.compatibility.compatible && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "plaza-notice",
 					role: "note",
-					children: version$1.compatibility.exempted ? t("compatibilityExempted") : t("incompatible")
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: compatibilityText(version$1, t) }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("runtimeVersion", { version: version$1.compatibility.runtimeVersion }) }),
+						Object.entries(version$1.compatibility.requirements).map(([engine, requirement]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("engineRequirement", {
+							engine,
+							requirement
+						}) }, engine))
+					]
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", {
+					className: "plaza-summary",
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("installationStatus") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: installationText(selected, t) })] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("recommendedVersion") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: version$1.version })] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("compatibility") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: compatibilityText(version$1, t) })] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("publishDate") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: formatDate(version$1.publishTimestamp, language) })] })
+					]
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: "plaza-detail-body",
 					children: detail?.status === "loading" || detail === null ? t("detailLoading") : detail.status === "error" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t(detail.failure === "timeout" ? "detailTimeout" : "detailError") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						onClick: () => void readDetail(selected),
 						children: t("retry")
-					})] }) : doc === void 0 ? t("noDetail") : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Markdown, {
+					})] }) : doc === void 0 ? t("noDetail") : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+						className: "plaza-detail-origin",
+						children: t("detailOrigin", { origin: detailOriginText(doc.origin, t) })
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Markdown, {
 						source: doc.markdown,
 						resolveImage: (path$1) => detailImage(doc.document, path$1)
-					})
+					})] })
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
 					className: "plaza-versions",
@@ -33922,12 +34015,23 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 									className: "plaza-badge",
 									children: t("current")
 								}),
+								item.update && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: "plaza-badge",
+									children: t("gitUpdate")
+								}),
 								!item.compatibility.compatible && item.compatibility.exempted && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: "plaza-badge",
 									children: t("compatibilityExempted")
 								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: formatDate(item.publishTimestamp, language) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: sourceLabel(selected.name, item) })
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+									formatDate(item.publishTimestamp, language),
+									" · ",
+									compatibilityText(item, t)
+								] }),
+								item.engines.dsh && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: t("requiresDsh", { requirement: item.engines.dsh }) }),
+								!item.compatibility.compatible && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: t("runtimeVersion", { version: item.compatibility.runtimeVersion }) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: t("packageSource", { source: sourceLabel(selected.name, item) }) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: t("installTarget", { target: installTargetLabel(item) }) })
 							] }),
 							offered && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
@@ -33946,18 +34050,22 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 					className: "plaza-facts",
 					children: [
 						selected.author && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("author") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: selected.author })] }),
+						selected.metadata.category && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("category") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: resolve(ctx, metadata?.categories[selected.metadata.category]?.title, selected.metadata.category) })] }),
+						selected.metadata.labels.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("labels") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: selected.metadata.labels.map((id) => resolve(ctx, metadata?.labels[id]?.title, id)).join(", ") })] }),
+						selected.metadata.keywords.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("keywords") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: selected.metadata.keywords.join(", ") })] }),
+						Object.keys(selected.metadata.sortKeys).length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("sortValues") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: Object.entries(selected.metadata.sortKeys).map(([id, value]) => `${resolve(ctx, metadata?.sortKeys[id]?.title, id)}: ${value}`).join(", ") })] }),
 						selected.homepage && safeExternal(selected.homepage) && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("homepage") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
 							href: safeExternal(selected.homepage),
 							target: "_blank",
 							rel: "noopener noreferrer",
 							children: [selected.homepage, " ↗"]
 						}) })] }),
-						selected.repository && safeExternal(selected.repository.url) && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("sourceCode") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
+						selected.repository && safeExternal(selected.repository.url) && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("sourceCode") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dd", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
 							href: safeExternal(selected.repository.url),
 							target: "_blank",
 							rel: "noopener noreferrer",
 							children: [selected.repository.url, " ↗"]
-						}) })] })
+						}), selected.repository.directory && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: t("repositoryDirectory", { directory: selected.repository.directory }) })] })] })
 					]
 				})
 			]
@@ -34017,7 +34125,15 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 							children: t("sourcesTitle")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("sourcesTrust") }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", { children: state.indexes.map((index$2) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: index$2.url }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", { children: state.indexes.map((index$2) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: resolve(ctx, index$2.title, index$2.url) }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: index$2.url }),
+							index$2.description && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: resolve(ctx, index$2.description, "") }),
+							index$2.error && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", {
+								className: "plaza-source-error",
+								children: t("sourceLastError", { error: index$2.error })
+							})
+						] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							disabled: savingSource,
 							onClick: () => void removeSource(index$2.url),
@@ -34069,6 +34185,66 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 								value: id,
 								children: resolve(ctx, item.title, id)
 							}, id))]
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+							"aria-label": t("compatibilityFilter"),
+							value: query.compatibility,
+							onChange: (event) => applyQuery({
+								...query,
+								compatibility: event.target.value
+							}),
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "all",
+									children: t("allCompatibility")
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "compatible",
+									children: t("compatible")
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "exempted",
+									children: t("compatibilityExempted")
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "incompatible",
+									children: t("incompatible")
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+							"aria-label": t("installationFilter"),
+							value: query.installation,
+							onChange: (event) => applyQuery({
+								...query,
+								installation: event.target.value
+							}),
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "all",
+									children: t("allInstallation")
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "not-installed",
+									children: t("notInstalled")
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "installed",
+									children: t("installed")
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "update-available",
+									children: t("update")
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "different-version",
+									children: t("differentVersion")
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "provided",
+									children: t("provided")
+								})
+							]
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
 							"aria-label": t("sort"),
@@ -34160,16 +34336,33 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 							}),
 							children: [chip, " ×"]
 						}, chip)),
+						query.compatibility !== "all" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+							onClick: () => applyQuery({
+								...query,
+								compatibility: "all"
+							}),
+							children: [compatibilityFilterText(query.compatibility, t), " ×"]
+						}),
+						query.installation !== "all" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+							onClick: () => applyQuery({
+								...query,
+								installation: "all"
+							}),
+							children: [installationFilterText(query.installation, t), " ×"]
+						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							onClick: () => applyQuery(INITIAL_QUERY),
 							children: t("clear")
 						})
 					]
 				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "plaza-result-meta",
 					"aria-live": "polite",
-					children: result && t("results", { count: result.total })
+					children: [result && (usesLocalFilters ? t("filteredResults", {
+						visible: visibleEntries.length,
+						total: result.total
+					}) : t("results", { count: result.total })), result && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("indexFetchedAt", { date: formatDateTime(result.fetchedAt, language) }) })]
 				}),
 				status === "error" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "plaza-state",
@@ -34180,12 +34373,12 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 				}) : status === "loading" && !result ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: "plaza-state",
 					children: t("loading")
-				}) : status === "empty" || result?.entries.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				}) : status === "empty" || visibleEntries.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: "plaza-state",
 					children: t("empty")
 				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: view === "grid" ? "plaza-grid" : "plaza-list",
-					children: result?.entries.map((entry) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Card, {
+					children: visibleEntries.map((entry) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Card, {
 						entry,
 						onOpen: () => void openDetail(entry, document.activeElement),
 						onInstall: () => installVersion(entry, presentedVersion(entry)),
@@ -34227,6 +34420,8 @@ const zh = {
 	viewList: "紧凑列表",
 	clear: "清除全部",
 	results: "{count} 个结果",
+	filteredResults: "已扫描全部 {total} 个结果，筛选后显示 {visible} 个",
+	indexFetchedAt: "索引读取于 {date}",
 	loading: "正在加载…",
 	empty: "没有符合当前条件的插件",
 	error: "无法读取插件索引",
@@ -34243,18 +34438,47 @@ const zh = {
 	compatible: "兼容",
 	incompatible: "不兼容",
 	compatibilityExempted: "已设置兼容性豁免",
+	compatibility: "兼容性",
+	compatibilityFilter: "兼容性筛选",
+	allCompatibility: "全部兼容状态",
+	installationFilter: "安装状态筛选",
+	allInstallation: "全部安装状态",
+	notInstalled: "未安装",
 	installed: "已安装",
+	installedVersion: "已安装 {version}",
 	update: "有更新",
+	updateFrom: "有更新（已安装 {version}）",
+	differentVersion: "版本不同或未知",
+	differentVersionValue: "已安装版本 {version}（与推荐版本不同）",
 	provided: "DSH 已提供",
 	install: "安装",
 	openInstalled: "在已安装中查看",
 	versions: "版本",
+	versionValue: "v{version}",
 	recommended: "推荐",
+	recommendedVersion: "推荐版本",
 	current: "当前已安装",
 	installVersion: "安装 {version}",
+	gitUpdate: "支持 Git 更新",
+	installationStatus: "安装状态",
+	publishDate: "发布时间",
+	runtimeVersion: "当前 DSH：{version}",
+	engineRequirement: "{engine} 要求：{requirement}",
+	requiresDsh: "要求 DSH：{requirement}",
+	packageSource: "包来源：{source}",
+	installTarget: "安装目标：{target}",
 	author: "作者",
+	category: "分类",
+	keywords: "关键词",
+	sortValues: "排序指标",
 	homepage: "项目主页",
 	sourceCode: "源代码",
+	repositoryDirectory: "仓库目录：{directory}",
+	detailOrigin: "详情来源：{origin}",
+	detailOriginLocale: "插件本地化详情",
+	detailOriginReadme: "发布包 README",
+	detailOriginRepository: "代码仓库 README",
+	installTrust: "此插件来自第三方索引“{source}”。安装后会以你的用户权限运行，请仅安装你信任的代码。",
 	noSources: "尚未配置索引源",
 	manageSources: "管理来源",
 	sourcesTitle: "索引来源",
@@ -34262,6 +34486,7 @@ const zh = {
 	sourceUrl: "索引 URL",
 	addSource: "添加",
 	removeSource: "移除",
+	sourceLastError: "最近错误：{error}",
 	sourceDuplicate: "此索引源已经添加。",
 	sourceInvalid: "索引 URL 无效，请使用不含用户名、密码或片段的 HTTP(S) 地址。",
 	sourceUnavailable: "当前 Profile 无法保存索引来源。",
@@ -34283,6 +34508,8 @@ const en = {
 	viewList: "Compact list",
 	clear: "Clear all",
 	results: "{count} results",
+	filteredResults: "Showing {visible} after scanning all {total} results",
+	indexFetchedAt: "Index read at {date}",
 	loading: "Loading…",
 	empty: "No plugins match the current filters",
 	error: "Could not read the plugin index",
@@ -34299,18 +34526,47 @@ const en = {
 	compatible: "Compatible",
 	incompatible: "Incompatible",
 	compatibilityExempted: "Compatibility exemption applied",
+	compatibility: "Compatibility",
+	compatibilityFilter: "Compatibility filter",
+	allCompatibility: "All compatibility states",
+	installationFilter: "Installation filter",
+	allInstallation: "All installation states",
+	notInstalled: "Not installed",
 	installed: "Installed",
+	installedVersion: "Installed {version}",
 	update: "Update available",
+	updateFrom: "Update available (installed {version})",
+	differentVersion: "Different or unknown version",
+	differentVersionValue: "Installed {version} (differs from recommended)",
 	provided: "Provided by DSH",
 	install: "Install",
 	openInstalled: "View in Installed",
 	versions: "Versions",
+	versionValue: "v{version}",
 	recommended: "Recommended",
+	recommendedVersion: "Recommended version",
 	current: "Currently installed",
 	installVersion: "Install {version}",
+	gitUpdate: "Git update supported",
+	installationStatus: "Installation status",
+	publishDate: "Published",
+	runtimeVersion: "Current DSH: {version}",
+	engineRequirement: "{engine} requires: {requirement}",
+	requiresDsh: "Requires DSH: {requirement}",
+	packageSource: "Package source: {source}",
+	installTarget: "Install target: {target}",
 	author: "Author",
+	category: "Category",
+	keywords: "Keywords",
+	sortValues: "Sort metrics",
 	homepage: "Homepage",
 	sourceCode: "Source code",
+	repositoryDirectory: "Repository directory: {directory}",
+	detailOrigin: "Details source: {origin}",
+	detailOriginLocale: "Localized plugin details",
+	detailOriginReadme: "Published package README",
+	detailOriginRepository: "Repository README",
+	installTrust: "This plugin comes from the third-party index “{source}”. It will run with your user permissions after installation. Install only code you trust.",
 	noSources: "No index sources configured",
 	manageSources: "Manage sources",
 	sourcesTitle: "Index sources",
@@ -34318,6 +34574,7 @@ const en = {
 	sourceUrl: "Index URL",
 	addSource: "Add",
 	removeSource: "Remove",
+	sourceLastError: "Last error: {error}",
 	sourceDuplicate: "This index source is already added.",
 	sourceInvalid: "Use an HTTP(S) index URL without a user name, password, or fragment.",
 	sourceUnavailable: "This profile cannot save index sources.",
