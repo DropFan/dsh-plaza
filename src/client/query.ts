@@ -17,9 +17,27 @@ export const INITIAL_QUERY: PlazaQuery = {
   text: '', category: '', labels: [], compatibility: 'all', installation: 'all', sort: { kind: 'index' },
 }
 
+export interface FilterChip {
+  readonly kind: 'category' | 'label'
+  readonly id: string
+}
+
 export function activeFilterCount(query: PlazaQuery): number {
   return Number(query.text.length > 0) + Number(query.category.length > 0) + query.labels.length
     + Number(query.compatibility !== 'all') + Number(query.installation !== 'all')
+}
+
+export function filterChips(query: PlazaQuery): FilterChip[] {
+  return [
+    ...(query.category ? [{ kind: 'category' as const, id: query.category }] : []),
+    ...query.labels.map(id => ({ kind: 'label' as const, id })),
+  ]
+}
+
+export function removeFilterChip(query: PlazaQuery, chip: FilterChip): PlazaQuery {
+  return chip.kind === 'category'
+    ? { ...query, category: '' }
+    : { ...query, labels: query.labels.filter(value => value !== chip.id) }
 }
 
 export function filterEntries(entries: readonly MarketEntry[], query: PlazaQuery): MarketEntry[] {

@@ -8,12 +8,12 @@ import {
   DEFAULT_PREFERENCES, readPreferences, sourcePreference, updateSourcePreference, writePreferences, type PlazaPreferences,
 } from './persistence.js'
 import {
-  INITIAL_QUERY, activeFilterCount, declaredQuery, filterEntries, toggleLabel, withText, type PlazaQuery, type ViewMode,
+  INITIAL_QUERY, activeFilterCount, declaredQuery, filterChips, filterEntries, removeFilterChip, toggleLabel, withText, type PlazaQuery, type ViewMode,
 } from './query.js'
 import plazaCss from './plaza.css?inline'
 import { PLAZA_VERSION } from './version.js'
 import { canonicalIndexUrl, sourceAlreadyExists } from './sources.js'
-import { installTargetLabel, presentedVersion, requestInstall, sourceLabel, versionInstallable, type MarketVersion } from './install.js'
+import { installTargetLabel, presentedVersion, requestInstall, requestUpdate, sourceLabel, versionInstallable, type MarketVersion } from './install.js'
 
 interface PlazaProps extends PluginTabProps {
   readonly ctx: ClientContext
@@ -110,7 +110,7 @@ function detailImage(document: string, path: string): string | undefined {
 
 function documentBase(): string { return typeof document === 'undefined' ? 'http://localhost/' : document.baseURI }
 
-export function Plaza({ ctx, controller, t, install, openPackage }: PlazaProps) {
+export function Plaza({ ctx, controller, t, install, update, openPackage }: PlazaProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
   const localeSnapshot = useSyncExternalStore(ctx.locale.subscribe.bind(ctx.locale), ctx.locale.getSnapshot.bind(ctx.locale), ctx.locale.getSnapshot.bind(ctx.locale))
   const [preferences, setPreferences] = useState<PlazaPreferences>(() => typeof localStorage === 'undefined' ? DEFAULT_PREFERENCES : readPreferences(localStorage))
@@ -126,6 +126,7 @@ export function Plaza({ ctx, controller, t, install, openPackage }: PlazaProps) 
   const [sourceDraft, setSourceDraft] = useState('')
   const [sourceError, setSourceError] = useState<'duplicate' | 'invalid' | 'unavailable' | 'error' | null>(null)
   const [savingSource, setSavingSource] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const selectedRef = useRef<MarketEntry | null>(null)
   const [detail, setDetail] = useState<DetailState | null>(null)
   const [detailRequest, setDetailRequest] = useState(0)
@@ -154,6 +155,20 @@ export function Plaza({ ctx, controller, t, install, openPackage }: PlazaProps) 
     })
   }, [controller])
   useEffect(() => {
+    if (state.indexesStatus !== 'ready' || !source || state.indexes.some(index => index.url === source)) return
+    const nextUrl = state.indexes[0]?.url ?? ''
+    setSource(nextUrl)
+    if (!nextUrl) {
+      const { selectedSource: _selectedSource, ...withoutSelectedSource } = preferencesRef.current
+      setQuery(INITIAL_QUERY); setDraft(''); save(withoutSelectedSource)
+      return
+    }
+    const next = sourcePreference(preferencesRef.current, nextUrl)
+    setQuery(next.query); setDraft(next.query.text); restoringScroll.current = true
+    save({ ...preferencesRef.current, selectedSource: nextUrl })
+    void controller.load(nextUrl, next.query, next.loadedCount)
+  }, [state.indexesStatus, state.indexes, source])
+  useEffect(() => {
     const disposers = [
       ctx.remote.$on('plugin-market/changed', () => { void controller.sourcesChanged() }),
       ctx.remote.$on('plugin-manager/changed', () => { const listing = controller.getSnapshot().listing; if (listing) void controller.load(listing.url, listing.query, Math.max(PAGE_SIZE, listing.value?.entries.length ?? PAGE_SIZE)) }),
@@ -177,6 +192,10 @@ export function Plaza({ ctx, controller, t, install, openPackage }: PlazaProps) 
     document.addEventListener('keydown', listener)
     return () => document.removeEventListener('keydown', listener)
   }, [selected])
+  useEffect(() => {
+    const entry = selectedRef.current
+    if (entry !== null) void readDetail(entry)
+  }, [language])
   useEffect(() => {
     if (detail?.status !== 'loading') return
     const request = detailRequest
@@ -202,6 +221,9 @@ export function Plaza({ ctx, controller, t, install, openPackage }: PlazaProps) 
   const setView = (next: ViewMode) => { setViewState(next); save({ ...preferencesRef.current, view: next }) }
   const installVersion = (entry: MarketEntry, version: MarketVersion) => {
     requestInstall(install, entry, version, resolve(ctx, entry.title, entry.name))
+  }
+  const updateVersion = (entry: MarketEntry, version: MarketVersion) => {
+    requestUpdate(update, entry, version)
   }
   const readDetail = async (entry: MarketEntry) => {
     setDetailRequest(value => value + 1)
@@ -250,7 +272,7 @@ export function Plaza({ ctx, controller, t, install, openPackage }: PlazaProps) 
   const categories = Object.entries(metadata?.categories ?? {})
   const labels = Object.entries(metadata?.labels ?? {})
   const sortKeys = Object.entries(metadata?.sortKeys ?? {})
-  const chips = [query.category, ...query.labels].filter(Boolean)
+  const chips = filterChips(query)
   const visibleEntries = result === null ? [] : filterEntries(result.entries, query)
   const usesLocalFilters = query.compatibility !== 'all' || query.installation !== 'all'
   const currentIndex = state.indexes.find(index => index.url === source)
@@ -278,7 +300,8 @@ export function Plaza({ ctx, controller, t, install, openPackage }: PlazaProps) 
         <ul>{selected.versions.map(item => {
           const current = selected.installation.installedVersion === item.version
           const offered = selected.installation.status !== 'provided' && !current && versionInstallable(item)
-          return <li key={item.version}><div><strong>{item.version}</strong>{item.version === selected.defaultVersion && <span className="plaza-badge">{t('recommended')}</span>}{current && <span className="plaza-badge">{t('current')}</span>}{item.update && <span className="plaza-badge">{t('gitUpdate')}</span>}{!item.compatibility.compatible && item.compatibility.exempted && <span className="plaza-badge">{t('compatibilityExempted')}</span>}<span>{formatDate(item.publishTimestamp, language)} · {compatibilityText(item, t)}</span>{item.engines.dsh && <small>{t('requiresDsh', { requirement: item.engines.dsh })}</small>}{!item.compatibility.compatible && <small>{t('runtimeVersion', { version: item.compatibility.runtimeVersion })}</small>}<small>{t('packageSource', { source: sourceLabel(selected.name, item) })}</small><small>{t('installTarget', { target: installTargetLabel(item) })}</small></div>{offered && <button type="button" className="plaza-action" onClick={() => installVersion(selected, item)}>{t('installVersion', { version: item.version })}</button>}{!versionInstallable(item) && <span className="plaza-version-status">{t('incompatible')}</span>}</li>
+          const gitUpdate = offered && item.update && item.source.type === 'git' && selected.installation.status !== 'not-installed'
+          return <li key={item.version}><div><strong>{item.version}</strong>{item.version === selected.defaultVersion && <span className="plaza-badge">{t('recommended')}</span>}{current && <span className="plaza-badge">{t('current')}</span>}{item.update && <span className="plaza-badge">{t('gitUpdate')}</span>}{!item.compatibility.compatible && item.compatibility.exempted && <span className="plaza-badge">{t('compatibilityExempted')}</span>}<span>{formatDate(item.publishTimestamp, language)} · {compatibilityText(item, t)}</span>{item.engines.dsh && <small>{t('requiresDsh', { requirement: item.engines.dsh })}</small>}{!item.compatibility.compatible && <small>{t('runtimeVersion', { version: item.compatibility.runtimeVersion })}</small>}<small>{t('packageSource', { source: sourceLabel(selected.name, item) })}</small><small>{t('installTarget', { target: installTargetLabel(item) })}</small></div>{offered && <button type="button" className="plaza-action" onClick={() => gitUpdate ? updateVersion(selected, item) : installVersion(selected, item)}>{t(gitUpdate ? 'updateVersion' : 'installVersion', { version: item.version })}</button>}{!versionInstallable(item) && <span className="plaza-version-status">{t('incompatible')}</span>}</li>
         })}</ul>
       </section>
       <dl className="plaza-facts">
@@ -296,7 +319,8 @@ export function Plaza({ ctx, controller, t, install, openPackage }: PlazaProps) 
   return <section className="plaza" aria-labelledby="plaza-title"><div className="plaza-scroll" ref={scrollRef} onScroll={event => { scrollPosition.current = event.currentTarget.scrollTop }} onPointerUp={rememberScroll} onKeyUp={rememberScroll}>
     <header className="plaza-heading"><div><h2 id="plaza-title">{t('title')} <span className="plaza-version">Beta {PLAZA_VERSION}</span></h2><p>{t('subtitle')}</p></div><div className="plaza-source-controls"><select aria-label={t('source')} value={source} disabled={state.indexes.length === 0} onChange={event => chooseSource(event.target.value)}>{state.indexes.length === 0 && <option value="">{t('noSources')}</option>}{state.indexes.map((index: MarketIndexSummary) => <option value={index.url} key={index.url}>{resolve(ctx, index.title, index.url)}</option>)}</select><button type="button" onClick={() => setEditingSources(value => !value)}>{t('manageSources')}</button></div></header>
     {editingSources && <section className="plaza-sources" aria-labelledby="plaza-sources-title"><h3 id="plaza-sources-title">{t('sourcesTitle')}</h3><p>{t('sourcesTrust')}</p><ul>{state.indexes.map(index => <li key={index.url}><div><strong>{resolve(ctx, index.title, index.url)}</strong><span>{index.url}</span>{index.description && <small>{resolve(ctx, index.description, '')}</small>}{index.error && <small className="plaza-source-error">{t('sourceLastError', { error: index.error })}</small>}</div><button type="button" disabled={savingSource} onClick={() => void removeSource(index.url)}>{t('removeSource')}</button></li>)}</ul><div className="plaza-source-add"><input type="url" value={sourceDraft} onChange={event => setSourceDraft(event.target.value)} placeholder="https://example.com/index.json" aria-label={t('sourceUrl')} /><button type="button" disabled={savingSource || sourceDraft.trim() === ''} onClick={() => void addSource()}>{t('addSource')}</button></div>{sourceError !== null && <p className="plaza-source-error" role="alert">{t(sourceError === 'duplicate' ? 'sourceDuplicate' : sourceError === 'invalid' ? 'sourceInvalid' : sourceError === 'unavailable' ? 'sourceUnavailable' : 'sourceError')}</p>}</section>}
-    <div className="plaza-toolbar">
+    <button type="button" className="plaza-filter-toggle" aria-expanded={filtersOpen} aria-controls="plaza-filters" onClick={() => setFiltersOpen(value => !value)}>{t('filters', { count: activeFilterCount(query) })}</button>
+    <div id="plaza-filters" className={`plaza-toolbar${filtersOpen ? ' plaza-toolbar-open' : ''}`}>
       <input type="search" value={draft} onChange={event => setDraft(event.target.value)} placeholder={t('search')} aria-label={t('search')} />
       <select aria-label={t('allCategories')} value={query.category} onChange={event => applyQuery({ ...query, category: event.target.value })}><option value="">{t('allCategories')}</option>{categories.map(([id, item]) => <option key={id} value={id}>{resolve(ctx, item.title, id)}</option>)}</select>
       <select aria-label={t('compatibilityFilter')} value={query.compatibility} onChange={event => applyQuery({ ...query, compatibility: event.target.value as PlazaQuery['compatibility'] })}><option value="all">{t('allCompatibility')}</option><option value="compatible">{t('compatible')}</option><option value="exempted">{t('compatibilityExempted')}</option><option value="incompatible">{t('incompatible')}</option></select>
@@ -306,10 +330,10 @@ export function Plaza({ ctx, controller, t, install, openPackage }: PlazaProps) 
       </select>
       <div className="plaza-view" role="group" aria-label={t('view')}><button type="button" aria-label={t('viewGrid')} aria-pressed={view === 'grid'} onClick={() => setView('grid')}>▦</button><button type="button" aria-label={t('viewList')} aria-pressed={view === 'list'} onClick={() => setView('list')}>☷</button></div>
     </div>
-    {labels.length > 0 && <fieldset className="plaza-labels"><legend>{t('labels')}</legend>{labels.map(([id, item]) => <label key={id}><input type="checkbox" checked={query.labels.includes(id)} onChange={() => applyQuery({ ...query, labels: toggleLabel(query.labels, id) })} />{resolve(ctx, item.title, id)}</label>)}</fieldset>}
-    {activeFilterCount(query) > 0 && <div className="plaza-chips">{query.text && <button aria-label={t('removeFilter', { name: query.text })} onClick={() => applyQuery(withText(query, ''))}>“{query.text}” ×</button>}{chips.map(chip => <button key={chip} aria-label={t('removeFilter', { name: chip })} onClick={() => applyQuery(chip === query.category ? { ...query, category: '' } : { ...query, labels: query.labels.filter(value => value !== chip) })}>{chip} ×</button>)}{query.compatibility !== 'all' && <button onClick={() => applyQuery({ ...query, compatibility: 'all' })}>{compatibilityFilterText(query.compatibility, t)} ×</button>}{query.installation !== 'all' && <button onClick={() => applyQuery({ ...query, installation: 'all' })}>{installationFilterText(query.installation, t)} ×</button>}<button onClick={() => applyQuery(INITIAL_QUERY)}>{t('clear')}</button></div>}
+    {labels.length > 0 && <fieldset className={`plaza-labels${filtersOpen ? ' plaza-labels-open' : ''}`}><legend>{t('labels')}</legend>{labels.map(([id, item]) => <label key={id}><input type="checkbox" checked={query.labels.includes(id)} onChange={() => applyQuery({ ...query, labels: toggleLabel(query.labels, id) })} />{resolve(ctx, item.title, id)}</label>)}</fieldset>}
+    {activeFilterCount(query) > 0 && <div className="plaza-chips">{query.text && <button aria-label={t('removeFilter', { name: query.text })} onClick={() => applyQuery(withText(query, ''))}>“{query.text}” ×</button>}{chips.map(chip => <button key={`${chip.kind}:${chip.id}`} aria-label={t('removeFilter', { name: chip.id })} onClick={() => applyQuery(removeFilterChip(query, chip))}>{chip.id} ×</button>)}{query.compatibility !== 'all' && <button onClick={() => applyQuery({ ...query, compatibility: 'all' })}>{compatibilityFilterText(query.compatibility, t)} ×</button>}{query.installation !== 'all' && <button onClick={() => applyQuery({ ...query, installation: 'all' })}>{installationFilterText(query.installation, t)} ×</button>}<button onClick={() => applyQuery(INITIAL_QUERY)}>{t('clear')}</button></div>}
     <div className="plaza-result-meta" aria-live="polite">{result && (usesLocalFilters ? t('filteredResults', { visible: visibleEntries.length, total: result.total }) : t('results', { count: result.total }))}{result && <span>{t('indexFetchedAt', { date: formatDateTime(result.fetchedAt, language) })}</span>}</div>
-    {status === 'error' ? <div className="plaza-state">{t('error')}<button onClick={() => void controller.load(source, query, Math.max(PAGE_SIZE, result?.entries.length ?? PAGE_SIZE))}>{t('retry')}</button></div> : status === 'loading' && !result ? <div className="plaza-state">{t('loading')}</div> : status === 'empty' || visibleEntries.length === 0 ? <div className="plaza-state">{t('empty')}</div> : <div className={view === 'grid' ? 'plaza-grid' : 'plaza-list'}>{visibleEntries.map(entry => <Card key={entry.name} entry={entry} onOpen={() => void openDetail(entry, document.activeElement as HTMLElement)} onInstall={() => installVersion(entry, presentedVersion(entry))} onOpenInstalled={() => openPackage(entry.name)} ctx={ctx} t={t} language={language} labels={metadata?.labels ?? {}} category={entry.metadata.category ? metadata?.categories[entry.metadata.category]?.title : undefined} />)}</div>}
+    {status === 'error' ? <div className="plaza-state">{t('error')}<button onClick={() => void controller.load(source, query, Math.max(PAGE_SIZE, result?.entries.length ?? PAGE_SIZE))}>{t('retry')}</button></div> : status === 'loading' && !result ? <div className="plaza-state">{t('loading')}</div> : status === 'empty' || visibleEntries.length === 0 ? <div className="plaza-state">{t('empty')}{activeFilterCount(query) > 0 && <button type="button" onClick={() => applyQuery(INITIAL_QUERY)}>{t('clear')}</button>}</div> : <div className={view === 'grid' ? 'plaza-grid' : 'plaza-list'}>{visibleEntries.map(entry => <Card key={entry.name} entry={entry} onOpen={() => void openDetail(entry, document.activeElement as HTMLElement)} onInstall={() => installVersion(entry, presentedVersion(entry))} onOpenInstalled={() => openPackage(entry.name)} ctx={ctx} t={t} language={language} labels={metadata?.labels ?? {}} category={entry.metadata.category ? metadata?.categories[entry.metadata.category]?.title : undefined} />)}</div>}
     {result?.nextOffset != null && <button className="plaza-more" type="button" disabled={status === 'more'} onClick={() => void showMore()}>{status === 'more' ? t('loading') : t('more')}</button>}
   </div></section>
 }

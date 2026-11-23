@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { INITIAL_QUERY, activeFilterCount, filterEntries, storageKey, toggleLabel } from '../src/client/query.js'
+import { INITIAL_QUERY, activeFilterCount, filterChips, filterEntries, removeFilterChip, storageKey, toggleLabel } from '../src/client/query.js'
 import type { MarketEntry } from '../src/client/contracts.js'
 
 describe('query helpers', () => {
@@ -20,6 +20,14 @@ describe('query helpers', () => {
     expect(filterEntries(entries, { ...INITIAL_QUERY, compatibility: 'exempted' }).map(entry => entry.name)).toEqual(['exempted'])
     expect(filterEntries(entries, { ...INITIAL_QUERY, compatibility: 'incompatible' }).map(entry => entry.name)).toEqual(['blocked'])
     expect(filterEntries(entries, { ...INITIAL_QUERY, installation: 'different-version' }).map(entry => entry.name)).toEqual(['exempted'])
+  })
+
+  it('keeps category and label chips distinct when their IDs match', () => {
+    const query = { ...INITIAL_QUERY, category: 'official', labels: ['official'] }
+    const chips = filterChips(query)
+    expect(chips).toEqual([{ kind: 'category', id: 'official' }, { kind: 'label', id: 'official' }])
+    expect(removeFilterChip(query, chips[0]!)).toMatchObject({ category: '', labels: ['official'] })
+    expect(removeFilterChip(query, chips[1]!)).toMatchObject({ category: 'official', labels: [] })
   })
 
   it('toggles one label without mutating the input', () => {

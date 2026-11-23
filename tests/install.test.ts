@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { installTargetLabel, presentedVersion, requestInstall, sourceLabel, versionInstallable } from '../src/client/install.js'
+import { installTargetLabel, presentedVersion, requestInstall, requestUpdate, sourceLabel, versionInstallable } from '../src/client/install.js'
 import type { MarketEntry } from '../src/client/contracts.js'
 
 function version(value: string, options: { compatible?: boolean; exempted?: boolean; source?: 'npm' | 'git' } = {}) {
@@ -15,6 +15,7 @@ function version(value: string, options: { compatible?: boolean; exempted?: bool
     compatibility: compatible ? { compatible: true } : {
       compatible: false, runtimeVersion: '0.2.2-rc.2', requirements: { 'engines.dsh': '>=9' }, exempted: options.exempted ?? false,
     },
+    ...(options.source === 'git' ? { update: true } : {}),
   } as MarketEntry['versions'][number]
 }
 
@@ -38,6 +39,16 @@ describe('install adapter', () => {
     expect(install).toHaveBeenCalledWith({
       spec: 'plugin@2.0.0', registry: 'https://registry.example/', title: 'Plugin title', version: '2.0.0',
     })
+  })
+
+  it('routes an installed Git version through the rollback-safe update owner', () => {
+    const update = vi.fn()
+    const plugin = entry('update-available')
+    const target = version('3.0.0', { source: 'git' })
+    expect(requestUpdate(update, plugin, target)).toBe(true)
+    expect(update).toHaveBeenCalledWith({ packageName: 'plugin', version: '3.0.0', spec: 'plugin@3.0.0' })
+    expect(requestUpdate(update, entry(), target)).toBe(false)
+    expect(requestUpdate(update, plugin, version('3.0.0'))).toBe(false)
   })
 
   it('blocks incompatible versions unless exempted and never replaces provided bundles', () => {

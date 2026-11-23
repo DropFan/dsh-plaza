@@ -33208,9 +33208,13 @@ var PlazaController = class {
 			this.patch({ indexesStatus: "error" });
 			return null;
 		}
+		const listing = this.state.listing;
+		const removedListing = listing !== null && !answer.value.some((index$2) => index$2.url === listing.url);
+		if (removedListing) this.listingRead++;
 		this.patch({
 			indexesStatus: "ready",
-			indexes: answer.value
+			indexes: answer.value,
+			...removedListing ? { listing: null } : {}
 		});
 		return answer.value;
 	}
@@ -33377,6 +33381,24 @@ const INITIAL_QUERY = {
 function activeFilterCount(query) {
 	return Number(query.text.length > 0) + Number(query.category.length > 0) + query.labels.length + Number(query.compatibility !== "all") + Number(query.installation !== "all");
 }
+function filterChips(query) {
+	return [...query.category ? [{
+		kind: "category",
+		id: query.category
+	}] : [], ...query.labels.map((id) => ({
+		kind: "label",
+		id
+	}))];
+}
+function removeFilterChip(query, chip) {
+	return chip.kind === "category" ? {
+		...query,
+		category: ""
+	} : {
+		...query,
+		labels: query.labels.filter((value) => value !== chip.id)
+	};
+}
 function filterEntries(entries, query) {
 	return entries.filter((entry) => {
 		const version$1 = entry.versions.find((item) => item.version === entry.defaultVersion) ?? entry.versions[0];
@@ -33501,7 +33523,7 @@ function updateSourcePreference(preferences, url, patch$4) {
 
 //#endregion
 //#region src/client/plaza.css?dsh-inline
-var plaza_default = ".plaza,.plaza-detail{box-sizing:border-box;width:100%;height:100%;min-height:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1)}.plaza-scroll{box-sizing:border-box;scrollbar-gutter:stable;height:100%;padding:24px clamp(16px,3vw,36px) 40px;overflow:auto}.plaza-heading,.plaza-toolbar,.plaza-card footer,.plaza-detail header{align-items:center;display:flex}.plaza-heading{justify-content:space-between;gap:16px;margin-bottom:20px}.plaza-heading h2,.plaza-detail h2{margin:0;font-size:24px}.plaza-version{vertical-align:middle;border:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);border-radius:999px;padding:2px 7px;font-size:11px;font-weight:400}.plaza-heading p,.plaza-detail header p{color:var(--dsw-alias-label-secondary);margin:4px 0 0}.plaza select,.plaza input,.plaza button,.plaza-detail button{font:inherit;color:inherit}.plaza select,.plaza input{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);border-radius:10px;height:36px;padding:0 12px}.plaza-source-controls{align-items:center;gap:8px;display:flex}.plaza-source-controls button,.plaza-sources button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:8px;height:36px;padding:0 12px}.plaza-sources{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:12px;margin-bottom:16px;padding:14px}.plaza-sources h3{margin:0}.plaza-sources p{color:var(--dsw-alias-label-secondary);margin:6px 0 12px;font-size:13px}.plaza-sources ul{gap:6px;margin:0 0 10px;padding:0;list-style:none;display:grid}.plaza-sources li{justify-content:space-between;align-items:center;gap:8px;display:flex}.plaza-sources li span{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.plaza-source-add{gap:8px;display:flex}.plaza-source-add input{flex:1}.plaza-sources .plaza-source-error{color:var(--dsw-alias-state-error-primary)}.plaza-toolbar{flex-wrap:wrap;gap:8px}.plaza-toolbar input{flex:240px}.plaza-toolbar select{flex:0 180px}.plaza-view{border:.5px solid var(--dsw-alias-border-l3);border-radius:10px;display:flex;overflow:hidden}.plaza-view button{background:0 0;border:0;width:36px;height:34px}.plaza-view button[aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover)}.plaza-labels{border:0;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;display:flex}.plaza-labels legend{float:left;color:var(--dsw-alias-label-secondary);margin-right:8px}.plaza-labels label{font-size:13px}.plaza-chips{flex-wrap:wrap;gap:6px;margin-top:12px;display:flex}.plaza-chips button,.plaza-more,.plaza-state button,.plaza-back,.plaza-detail-body button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:999px;padding:5px 10px}.plaza-result-meta{min-height:20px;color:var(--dsw-alias-label-secondary);margin:18px 0 10px;font-size:13px}.plaza-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));grid-auto-rows:1fr;gap:12px;display:grid}.plaza-list{grid-template-columns:1fr;gap:8px;display:grid}.plaza-card{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:14px;flex-direction:column;min-width:0;min-height:230px;display:flex;overflow:hidden}.plaza-list .plaza-card{min-height:0}.plaza-card-main{text-align:left;cursor:pointer;background:0 0;border:0;flex:1;gap:12px;width:100%;padding:16px;display:flex}.plaza-icon{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);width:42px;height:42px;color:var(--dsw-alias-link);border-radius:11px;flex:0 0 42px;place-items:center;font-weight:700;display:grid;overflow:hidden}.plaza-icon img{object-fit:contain;width:36px;height:36px;display:block}.plaza-card-copy{flex-direction:column;min-width:0;display:flex}.plaza-package{color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;font-size:12px;overflow:hidden}.plaza-description{color:var(--dsw-alias-label-secondary);-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-top:10px;font-size:13px;line-height:19px;display:-webkit-box;overflow:hidden}.plaza-meta{color:var(--dsw-alias-label-tertiary);margin-top:8px;font-size:12px}.plaza-card-tags{gap:5px;min-height:24px;padding:0 16px;display:flex}.plaza-card-tags span{background:var(--dsw-alias-interactive-bg-hover);border-radius:5px;padding:2px 6px;font-size:11px}.plaza-card footer{border-top:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);justify-content:space-between;margin-top:10px;padding:10px 16px;font-size:12px}.plaza-action{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:8px;padding:5px 10px}.plaza-action:disabled{cursor:not-allowed;opacity:.5}.plaza-more{margin:18px auto;display:block}.plaza-state{min-height:220px;color:var(--dsw-alias-label-secondary);place-items:center;gap:12px;display:grid}.plaza-detail{padding:24px clamp(16px,4vw,48px);overflow:auto}.plaza-detail header{gap:14px;margin:24px 0}.plaza-detail-heading{flex:1;min-width:0}.plaza-detail-body{border-top:.5px solid var(--dsw-alias-border-l3);max-width:900px;margin-top:20px;padding-top:20px}.plaza-back{border-radius:8px}.plaza-notice{border:.5px solid var(--dsw-alias-state-warn-primary);max-width:900px;color:var(--dsw-alias-state-warn-primary);border-radius:8px;padding:10px}.plaza-markdown{overflow-wrap:anywhere;line-height:1.65}.plaza-markdown>:first-child{margin-top:0}.plaza-markdown>:last-child{margin-bottom:0}.plaza-markdown img{border-radius:8px;max-width:100%;height:auto;margin:12px 0;display:block}.plaza-markdown pre{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:8px;padding:12px;overflow:auto}.plaza-markdown code,.plaza-markdown kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.plaza-markdown :not(pre)>code,.plaza-markdown kbd{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:5px;padding:1px 5px;font-size:.9em}.plaza-markdown blockquote{border-left:3px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);margin-inline:0;padding-left:14px}.plaza-markdown table{border-spacing:0;border-collapse:collapse;max-width:100%;display:block;overflow:auto}.plaza-markdown th,.plaza-markdown td{border:.5px solid var(--dsw-alias-border-l2);text-align:left;padding:6px 12px}.plaza-markdown th{background:var(--dsw-alias-bg-module-platform)}.plaza-markdown details{border:.5px solid var(--dsw-alias-border-l2);border-radius:8px;margin:12px 0;padding:8px 12px}.plaza-markdown summary{cursor:pointer;font-weight:500}.plaza-markdown input[type=checkbox]{margin-right:7px}.plaza-markdown a,.plaza-facts a{color:var(--dsw-alias-link)}.plaza-versions{max-width:900px;margin-top:28px}.plaza-versions h3{margin-bottom:10px}.plaza-versions ul{gap:8px;margin:0;padding:0;list-style:none;display:grid}.plaza-versions li{border:.5px solid var(--dsw-alias-border-l2);border-radius:8px;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;display:flex}.plaza-versions li>div{flex-wrap:wrap;align-items:center;gap:8px;min-width:0;display:flex}.plaza-versions small{width:100%;color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere}.plaza-badge{background:var(--dsw-alias-interactive-bg-hover);border-radius:999px;padding:2px 7px;font-size:11px}.plaza-version-status{color:var(--dsw-alias-state-warn-primary);font-size:12px}.plaza-facts{gap:10px;max-width:900px;margin-top:28px;display:grid}.plaza-facts div{grid-template-columns:minmax(100px,160px) 1fr;gap:12px;display:grid}.plaza-facts dt{color:var(--dsw-alias-label-secondary)}.plaza-facts dd{overflow-wrap:anywhere;margin:0}.plaza button:focus-visible,.plaza input:focus-visible,.plaza select:focus-visible,.plaza-detail button:focus-visible,.plaza-detail a:focus-visible{outline:2px solid var(--dsw-alias-link);outline-offset:2px}@media (hover:hover){.plaza-card-main:hover,.plaza-chips button:hover,.plaza-more:hover,.plaza-back:hover,.plaza-action:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}}.plaza-status{gap:2px;display:grid}.plaza-status span:last-child{color:var(--dsw-alias-label-tertiary)}.plaza-result-meta{flex-wrap:wrap;justify-content:space-between;gap:12px;display:flex}.plaza-sources li>div{gap:2px;min-width:0;display:grid}.plaza-sources li>div span,.plaza-sources li>div small{overflow-wrap:anywhere;min-width:0;color:var(--dsw-alias-label-secondary)}.plaza-trust{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);max-width:900px;color:var(--dsw-alias-label-secondary);border-radius:8px;padding:10px;font-size:13px}.plaza-notice{gap:4px;display:grid}.plaza-summary{border:.5px solid var(--dsw-alias-border-l2);border-radius:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));max-width:900px;margin:20px 0 0;display:grid;overflow:hidden}.plaza-summary div{padding:10px 12px}.plaza-summary dt{color:var(--dsw-alias-label-secondary);font-size:12px}.plaza-summary dd{margin:4px 0 0;font-weight:500}.plaza-detail-origin{color:var(--dsw-alias-label-tertiary);font-size:12px}.plaza-facts dd small{color:var(--dsw-alias-label-secondary);margin-top:4px;display:block}@media (width<=640px){.plaza-scroll,.plaza-detail{padding:16px 12px 32px}.plaza-heading,.plaza-source-controls,.plaza-source-add{flex-direction:column;align-items:stretch}.plaza-source-controls>*{width:100%}.plaza-sources li{flex-direction:column;align-items:stretch}.plaza-toolbar>*{flex:100%!important}.plaza-grid{grid-template-columns:1fr}.plaza-card{min-height:210px}.plaza-facts div{grid-template-columns:1fr;gap:2px}.plaza-result-meta{display:grid}.plaza-summary{grid-template-columns:1fr 1fr}}@media (prefers-reduced-motion:reduce){.plaza *{scroll-behavior:auto!important}}";
+var plaza_default = ".plaza,.plaza-detail{box-sizing:border-box;width:100%;height:100%;min-height:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1)}.plaza-scroll{box-sizing:border-box;scrollbar-gutter:stable;height:100%;padding:24px clamp(16px,3vw,36px) 40px;overflow:auto}.plaza-heading,.plaza-toolbar,.plaza-card footer,.plaza-detail header{align-items:center;display:flex}.plaza-heading{justify-content:space-between;gap:16px;margin-bottom:20px}.plaza-heading h2,.plaza-detail h2{margin:0;font-size:24px}.plaza-version{vertical-align:middle;border:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);border-radius:999px;padding:2px 7px;font-size:11px;font-weight:400}.plaza-heading p,.plaza-detail header p{color:var(--dsw-alias-label-secondary);margin:4px 0 0}.plaza select,.plaza input,.plaza button,.plaza-detail button{font:inherit;color:inherit}.plaza select,.plaza input{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);border-radius:10px;height:36px;padding:0 12px}.plaza-source-controls{align-items:center;gap:8px;display:flex}.plaza-source-controls button,.plaza-sources button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:8px;height:36px;padding:0 12px}.plaza-sources{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:12px;margin-bottom:16px;padding:14px}.plaza-sources h3{margin:0}.plaza-sources p{color:var(--dsw-alias-label-secondary);margin:6px 0 12px;font-size:13px}.plaza-sources ul{gap:6px;margin:0 0 10px;padding:0;list-style:none;display:grid}.plaza-sources li{justify-content:space-between;align-items:center;gap:8px;display:flex}.plaza-sources li span{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.plaza-source-add{gap:8px;display:flex}.plaza-source-add input{flex:1}.plaza-sources .plaza-source-error{color:var(--dsw-alias-state-error-primary)}.plaza-toolbar{flex-wrap:wrap;gap:8px}.plaza-filter-toggle{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);text-align:left;cursor:pointer;border-radius:8px;height:36px;padding:0 12px;display:none}.plaza-toolbar input{flex:240px}.plaza-toolbar select{flex:0 180px}.plaza-view{border:.5px solid var(--dsw-alias-border-l3);border-radius:10px;display:flex;overflow:hidden}.plaza-view button{background:0 0;border:0;width:36px;height:34px}.plaza-view button[aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover)}.plaza-labels{border:0;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;display:flex}.plaza-labels legend{float:left;color:var(--dsw-alias-label-secondary);margin-right:8px}.plaza-labels label{font-size:13px}.plaza-chips{flex-wrap:wrap;gap:6px;margin-top:12px;display:flex}.plaza-chips button,.plaza-more,.plaza-state button,.plaza-back,.plaza-detail-body button{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:999px;padding:5px 10px}.plaza-result-meta{min-height:20px;color:var(--dsw-alias-label-secondary);margin:18px 0 10px;font-size:13px}.plaza-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));grid-auto-rows:1fr;gap:12px;display:grid}.plaza-list{grid-template-columns:1fr;gap:8px;display:grid}.plaza-card{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:14px;flex-direction:column;min-width:0;min-height:230px;display:flex;overflow:hidden}.plaza-list .plaza-card{min-height:0}.plaza-card-main{text-align:left;cursor:pointer;background:0 0;border:0;flex:1;gap:12px;width:100%;padding:16px;display:flex}.plaza-icon{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);width:42px;height:42px;color:var(--dsw-alias-link);border-radius:11px;flex:0 0 42px;place-items:center;font-weight:700;display:grid;overflow:hidden}.plaza-icon img{object-fit:contain;width:36px;height:36px;display:block}.plaza-card-copy{flex-direction:column;min-width:0;display:flex}.plaza-package{color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;font-size:12px;overflow:hidden}.plaza-description{color:var(--dsw-alias-label-secondary);-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-top:10px;font-size:13px;line-height:19px;display:-webkit-box;overflow:hidden}.plaza-meta{color:var(--dsw-alias-label-tertiary);margin-top:8px;font-size:12px}.plaza-card-tags{gap:5px;min-height:24px;padding:0 16px;display:flex}.plaza-card-tags span{background:var(--dsw-alias-interactive-bg-hover);border-radius:5px;padding:2px 6px;font-size:11px}.plaza-card footer{border-top:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-secondary);justify-content:space-between;margin-top:10px;padding:10px 16px;font-size:12px}.plaza-action{border:.5px solid var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:8px;padding:5px 10px}.plaza-action:disabled{cursor:not-allowed;opacity:.5}.plaza-more{margin:18px auto;display:block}.plaza-state{min-height:220px;color:var(--dsw-alias-label-secondary);place-items:center;gap:12px;display:grid}.plaza-detail{padding:24px clamp(16px,4vw,48px);overflow:auto}.plaza-detail header{gap:14px;margin:24px 0}.plaza-detail-heading{flex:1;min-width:0}.plaza-detail-body{border-top:.5px solid var(--dsw-alias-border-l3);max-width:900px;margin-top:20px;padding-top:20px}.plaza-back{border-radius:8px}.plaza-notice{border:.5px solid var(--dsw-alias-state-warn-primary);max-width:900px;color:var(--dsw-alias-state-warn-primary);border-radius:8px;padding:10px}.plaza-markdown{overflow-wrap:anywhere;line-height:1.65}.plaza-markdown>:first-child{margin-top:0}.plaza-markdown>:last-child{margin-bottom:0}.plaza-markdown img{border-radius:8px;max-width:100%;height:auto;margin:12px 0;display:block}.plaza-markdown pre{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:8px;padding:12px;overflow:auto}.plaza-markdown code,.plaza-markdown kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.plaza-markdown :not(pre)>code,.plaza-markdown kbd{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);border-radius:5px;padding:1px 5px;font-size:.9em}.plaza-markdown blockquote{border-left:3px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);margin-inline:0;padding-left:14px}.plaza-markdown table{border-spacing:0;border-collapse:collapse;max-width:100%;display:block;overflow:auto}.plaza-markdown th,.plaza-markdown td{border:.5px solid var(--dsw-alias-border-l2);text-align:left;padding:6px 12px}.plaza-markdown th{background:var(--dsw-alias-bg-module-platform)}.plaza-markdown details{border:.5px solid var(--dsw-alias-border-l2);border-radius:8px;margin:12px 0;padding:8px 12px}.plaza-markdown summary{cursor:pointer;font-weight:500}.plaza-markdown input[type=checkbox]{margin-right:7px}.plaza-markdown a,.plaza-facts a{color:var(--dsw-alias-link)}.plaza-versions{max-width:900px;margin-top:28px}.plaza-versions h3{margin-bottom:10px}.plaza-versions ul{gap:8px;margin:0;padding:0;list-style:none;display:grid}.plaza-versions li{border:.5px solid var(--dsw-alias-border-l2);border-radius:8px;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;display:flex}.plaza-versions li>div{flex-wrap:wrap;align-items:center;gap:8px;min-width:0;display:flex}.plaza-versions small{width:100%;color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere}.plaza-badge{background:var(--dsw-alias-interactive-bg-hover);border-radius:999px;padding:2px 7px;font-size:11px}.plaza-version-status{color:var(--dsw-alias-state-warn-primary);font-size:12px}.plaza-facts{gap:10px;max-width:900px;margin-top:28px;display:grid}.plaza-facts div{grid-template-columns:minmax(100px,160px) 1fr;gap:12px;display:grid}.plaza-facts dt{color:var(--dsw-alias-label-secondary)}.plaza-facts dd{overflow-wrap:anywhere;margin:0}.plaza button:focus-visible,.plaza input:focus-visible,.plaza select:focus-visible,.plaza-detail button:focus-visible,.plaza-detail a:focus-visible{outline:2px solid var(--dsw-alias-link);outline-offset:2px}@media (hover:hover){.plaza-card-main:hover,.plaza-chips button:hover,.plaza-more:hover,.plaza-back:hover,.plaza-action:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}}.plaza-status{gap:2px;display:grid}.plaza-status span:last-child{color:var(--dsw-alias-label-tertiary)}.plaza-result-meta{flex-wrap:wrap;justify-content:space-between;gap:12px;display:flex}.plaza-sources li>div{gap:2px;min-width:0;display:grid}.plaza-sources li>div span,.plaza-sources li>div small{overflow-wrap:anywhere;min-width:0;color:var(--dsw-alias-label-secondary)}.plaza-trust{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);max-width:900px;color:var(--dsw-alias-label-secondary);border-radius:8px;padding:10px;font-size:13px}.plaza-notice{gap:4px;display:grid}.plaza-summary{border:.5px solid var(--dsw-alias-border-l2);border-radius:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));max-width:900px;margin:20px 0 0;display:grid;overflow:hidden}.plaza-summary div{padding:10px 12px}.plaza-summary dt{color:var(--dsw-alias-label-secondary);font-size:12px}.plaza-summary dd{margin:4px 0 0;font-weight:500}.plaza-detail-origin{color:var(--dsw-alias-label-tertiary);font-size:12px}.plaza-facts dd small{color:var(--dsw-alias-label-secondary);margin-top:4px;display:block}@media (width<=640px){.plaza-scroll,.plaza-detail{padding:16px 12px 32px}.plaza-heading,.plaza-source-controls,.plaza-source-add{flex-direction:column;align-items:stretch}.plaza-source-controls>*{width:100%}.plaza-sources li{flex-direction:column;align-items:stretch}.plaza-filter-toggle{z-index:2;width:100%;margin-bottom:8px;display:block;position:sticky;top:0}.plaza-toolbar,.plaza-labels{display:none}.plaza-toolbar-open,.plaza-labels-open{display:flex}.plaza-toolbar>*{flex:100%!important}.plaza-grid{grid-template-columns:1fr}.plaza-card{min-height:210px}.plaza-facts div{grid-template-columns:1fr;gap:2px}.plaza-result-meta{display:grid}.plaza-summary{grid-template-columns:1fr 1fr}}@media (prefers-reduced-motion:reduce){.plaza *{scroll-behavior:auto!important}}";
 
 //#endregion
 //#region package.json
@@ -33541,6 +33563,15 @@ function requestInstall(install, entry, version$1, title) {
 		...version$1.install,
 		title,
 		version: version$1.version
+	});
+	return true;
+}
+function requestUpdate(update, entry, version$1) {
+	if (!version$1.update || version$1.source.type !== "git" || entry.installation.status === "not-installed" || entry.installation.status === "provided" || !versionInstallable(version$1)) return false;
+	update({
+		packageName: entry.name,
+		version: version$1.version,
+		spec: version$1.install.spec
 	});
 	return true;
 }
@@ -33680,7 +33711,7 @@ function detailImage(document$3, path$1) {
 function documentBase() {
 	return typeof document === "undefined" ? "http://localhost/" : document.baseURI;
 }
-function Plaza({ ctx, controller, t, install, openPackage }) {
+function Plaza({ ctx, controller, t, install, update, openPackage }) {
 	const state = (0, react.useSyncExternalStore)(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
 	const localeSnapshot = (0, react.useSyncExternalStore)(ctx.locale.subscribe.bind(ctx.locale), ctx.locale.getSnapshot.bind(ctx.locale), ctx.locale.getSnapshot.bind(ctx.locale));
 	const [preferences, setPreferences] = (0, react.useState)(() => typeof localStorage === "undefined" ? DEFAULT_PREFERENCES : readPreferences(localStorage));
@@ -33699,6 +33730,7 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 	const [sourceDraft, setSourceDraft] = (0, react.useState)("");
 	const [sourceError, setSourceError] = (0, react.useState)(null);
 	const [savingSource, setSavingSource] = (0, react.useState)(false);
+	const [filtersOpen, setFiltersOpen] = (0, react.useState)(false);
 	const selectedRef = (0, react.useRef)(null);
 	const [detail, setDetail] = (0, react.useState)(null);
 	const [detailRequest, setDetailRequest] = (0, react.useState)(0);
@@ -33734,6 +33766,31 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 			controller.load(url, saved.query, saved.loadedCount);
 		});
 	}, [controller]);
+	(0, react.useEffect)(() => {
+		if (state.indexesStatus !== "ready" || !source || state.indexes.some((index$2) => index$2.url === source)) return;
+		const nextUrl = state.indexes[0]?.url ?? "";
+		setSource(nextUrl);
+		if (!nextUrl) {
+			const { selectedSource: _selectedSource,...withoutSelectedSource } = preferencesRef.current;
+			setQuery(INITIAL_QUERY);
+			setDraft("");
+			save(withoutSelectedSource);
+			return;
+		}
+		const next = sourcePreference(preferencesRef.current, nextUrl);
+		setQuery(next.query);
+		setDraft(next.query.text);
+		restoringScroll.current = true;
+		save({
+			...preferencesRef.current,
+			selectedSource: nextUrl
+		});
+		controller.load(nextUrl, next.query, next.loadedCount);
+	}, [
+		state.indexesStatus,
+		state.indexes,
+		source
+	]);
 	(0, react.useEffect)(() => {
 		const disposers = [
 			ctx.remote.$on("plugin-market/changed", () => {
@@ -33777,6 +33834,10 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 		document.addEventListener("keydown", listener);
 		return () => document.removeEventListener("keydown", listener);
 	}, [selected]);
+	(0, react.useEffect)(() => {
+		const entry = selectedRef.current;
+		if (entry !== null) readDetail(entry);
+	}, [language]);
 	(0, react.useEffect)(() => {
 		if (detail?.status !== "loading") return;
 		const request = detailRequest;
@@ -33832,6 +33893,9 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 	};
 	const installVersion = (entry, version$1) => {
 		requestInstall(install, entry, version$1, resolve(ctx, entry.title, entry.name));
+	};
+	const updateVersion = (entry, version$1) => {
+		requestUpdate(update, entry, version$1);
 	};
 	const readDetail = async (entry) => {
 		setDetailRequest((value) => value + 1);
@@ -33911,7 +33975,7 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 	const categories = Object.entries(metadata?.categories ?? {});
 	const labels = Object.entries(metadata?.labels ?? {});
 	const sortKeys = Object.entries(metadata?.sortKeys ?? {});
-	const chips = [query.category, ...query.labels].filter(Boolean);
+	const chips = filterChips(query);
 	const visibleEntries = result === null ? [] : filterEntries(result.entries, query);
 	const usesLocalFilters = query.compatibility !== "all" || query.installation !== "all";
 	const currentIndex = state.indexes.find((index$2) => index$2.url === source);
@@ -34004,6 +34068,7 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", { children: selected.versions.map((item) => {
 						const current = selected.installation.installedVersion === item.version;
 						const offered = selected.installation.status !== "provided" && !current && versionInstallable(item);
+						const gitUpdate = offered && item.update && item.source.type === "git" && selected.installation.status !== "not-installed";
 						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: item.version }),
@@ -34036,8 +34101,8 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 							offered && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
 								className: "plaza-action",
-								onClick: () => installVersion(selected, item),
-								children: t("installVersion", { version: item.version })
+								onClick: () => gitUpdate ? updateVersion(selected, item) : installVersion(selected, item),
+								children: t(gitUpdate ? "updateVersion" : "installVersion", { version: item.version })
 							}),
 							!versionInstallable(item) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: "plaza-version-status",
@@ -34161,8 +34226,17 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 						})
 					]
 				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+					type: "button",
+					className: "plaza-filter-toggle",
+					"aria-expanded": filtersOpen,
+					"aria-controls": "plaza-filters",
+					onClick: () => setFiltersOpen((value) => !value),
+					children: t("filters", { count: activeFilterCount(query) })
+				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: "plaza-toolbar",
+					id: "plaza-filters",
+					className: `plaza-toolbar${filtersOpen ? " plaza-toolbar-open" : ""}`,
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 							type: "search",
@@ -34303,7 +34377,7 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 					]
 				}),
 				labels.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("fieldset", {
-					className: "plaza-labels",
+					className: `plaza-labels${filtersOpen ? " plaza-labels-open" : ""}`,
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("legend", { children: t("labels") }), labels.map(([id, item]) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 						type: "checkbox",
 						checked: query.labels.includes(id),
@@ -34326,16 +34400,10 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 							]
 						}),
 						chips.map((chip) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-							"aria-label": t("removeFilter", { name: chip }),
-							onClick: () => applyQuery(chip === query.category ? {
-								...query,
-								category: ""
-							} : {
-								...query,
-								labels: query.labels.filter((value) => value !== chip)
-							}),
-							children: [chip, " ×"]
-						}, chip)),
+							"aria-label": t("removeFilter", { name: chip.id }),
+							onClick: () => applyQuery(removeFilterChip(query, chip)),
+							children: [chip.id, " ×"]
+						}, `${chip.kind}:${chip.id}`)),
 						query.compatibility !== "all" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 							onClick: () => applyQuery({
 								...query,
@@ -34373,9 +34441,13 @@ function Plaza({ ctx, controller, t, install, openPackage }) {
 				}) : status === "loading" && !result ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: "plaza-state",
 					children: t("loading")
-				}) : status === "empty" || visibleEntries.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				}) : status === "empty" || visibleEntries.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "plaza-state",
-					children: t("empty")
+					children: [t("empty"), activeFilterCount(query) > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: () => applyQuery(INITIAL_QUERY),
+						children: t("clear")
+					})]
 				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: view === "grid" ? "plaza-grid" : "plaza-list",
 					children: visibleEntries.map((entry) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Card, {
@@ -34418,6 +34490,7 @@ const zh = {
 	view: "视图模式",
 	viewGrid: "网格视图",
 	viewList: "紧凑列表",
+	filters: "筛选条件（{count}）",
 	clear: "清除全部",
 	results: "{count} 个结果",
 	filteredResults: "已扫描全部 {total} 个结果，筛选后显示 {visible} 个",
@@ -34459,6 +34532,7 @@ const zh = {
 	recommendedVersion: "推荐版本",
 	current: "当前已安装",
 	installVersion: "安装 {version}",
+	updateVersion: "更新到 {version}",
 	gitUpdate: "支持 Git 更新",
 	installationStatus: "安装状态",
 	publishDate: "发布时间",
@@ -34506,6 +34580,7 @@ const en = {
 	view: "View mode",
 	viewGrid: "Grid view",
 	viewList: "Compact list",
+	filters: "Filters ({count})",
 	clear: "Clear all",
 	results: "{count} results",
 	filteredResults: "Showing {visible} after scanning all {total} results",
@@ -34547,6 +34622,7 @@ const en = {
 	recommendedVersion: "Recommended version",
 	current: "Currently installed",
 	installVersion: "Install {version}",
+	updateVersion: "Update to {version}",
 	gitUpdate: "Git update supported",
 	installationStatus: "Installation status",
 	publishDate: "Published",

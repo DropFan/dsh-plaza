@@ -37,8 +37,8 @@ pnpm check
 - 当前已实现列表、组合查询、规则网格/列表、详情图片路由，以及每来源查询、兼容性/安装状态筛选、已加载数量和滚动位置恢复；启用客户端筛选时会自动读取服务端查询的全部分页。
 - 已呈现 Format 1 与官方 Market Remote 提供的插件元数据、推荐/已安装版本、逐版本兼容要求与精确来源、详情来源、索引说明/错误/读取时间。
 - 详情使用 `react-markdown`、`remark-gfm`、`rehype-raw` 与 `rehype-sanitize` 渲染 GFM 和常见 README HTML；脚本、事件属性、内联样式、iframe 和危险协议会被移除。
-- 已接入官方安装闭环：推荐版本与精确版本调用 Owner `install`，已安装、可更新或 DSH 提供的条目调用 `openPackage`。更新、启停、配置、卸载和恢复仍由官方 Installed/Plugin Manager 负责。
+- 已接入官方安装核心链路：推荐版本与精确版本调用 Owner `install`，已安装 Git Bundle 的可更新版本调用回滚安全的 Owner `update`，其他已安装或 DSH 提供的条目调用 `openPackage`。启停、配置、卸载和恢复仍由官方 Installed/Plugin Manager 负责。
 - 未实现收藏、评论、分组、备注、备份或自建包管理事务。
-- 已在 DSH Desktop `0.2.2-rc.1` 完成完整集成验证，并在 `0.2.2-rc.2` 复核运行与核心契约：Slot、Format 1 索引、搜索筛选、规则网格/列表、详情、深浅主题、窄屏、键盘返回、状态恢复和官方安装/移除闭环均保持兼容。
+- 已在 DSH Desktop `0.2.2-rc.1` 完成集成验证，并在 `0.2.2-rc.2` 复核运行与核心契约：Slot、Format 1 索引、搜索筛选、规则网格/列表、详情、深浅主题、窄屏、键盘返回、状态恢复和官方安装/移除核心链路均保持兼容；构建审批、取消、失败、断线恢复和需重启等异常路径仍待系统验证。
 - 测试索引使用 dshmarket 文档公开推荐的独立 Format 1 地址 `https://cdn.jsdelivr.net/npm/dsh-plugin-catalog/index.json`；不调用 dshmarket 私有 API，也不读取其状态文件。
 - Plaza Bundle 只声明 UI row；官方实验 Market Bundle 是 `pluginMarket` Host row 的唯一 Owner，避免重复行导致 Settings 无法保存来源。

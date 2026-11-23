@@ -50,6 +50,33 @@ describe('PlazaController', () => {
     expect(controller.getSnapshot().indexes).toEqual([{ url: 'https://example.test/index.json' }])
   })
 
+  it('clears a listing whose source was removed', async () => {
+    const { controller, listIndexes, setIndexes, search } = setup()
+    search.mockResolvedValue(ok(result(['old'], 1, null)))
+    await controller.load('https://old.test/index.json', INITIAL_QUERY)
+    setIndexes.mockResolvedValue({ ok: true, value: undefined })
+    listIndexes.mockResolvedValue({ ok: true, value: [{ url: 'https://new.test/index.json' }] })
+
+    await controller.setIndexes(['https://new.test/index.json'])
+
+    expect(controller.getSnapshot().listing).toBeNull()
+  })
+
+  it('does not restore a removed source when its pending listing resolves', async () => {
+    const { controller, listIndexes, setIndexes, search } = setup()
+    const pending = deferred<RemoteResult<MarketSearchResult>>()
+    search.mockReturnValue(pending.promise)
+    const loading = controller.load('https://old.test/index.json', INITIAL_QUERY)
+    setIndexes.mockResolvedValue({ ok: true, value: undefined })
+    listIndexes.mockResolvedValue({ ok: true, value: [] })
+
+    await controller.setIndexes([])
+    pending.resolve(ok(result(['orphan'], 1, null)))
+    await loading
+
+    expect(controller.getSnapshot().listing).toBeNull()
+  })
+
   it('preserves the official duplicate-index failure reason', async () => {
     const { controller, setIndexes } = setup()
     setIndexes.mockResolvedValue({
@@ -115,6 +142,20 @@ describe('PlazaController', () => {
     await controller.load('https://example.test/index.json', { ...INITIAL_QUERY, compatibility: 'incompatible' })
 
     expect(search).toHaveBeenCalledTimes(2)
+    expect(controller.getSnapshot().listing?.value?.nextOffset).toBeNull()
+  })
+
+  it('loads a 4000-entry index in bounded pages for a client filter', async () => {
+    const { controller, search } = setup()
+    search.mockImplementation((_url: string, query: { offset: number; limit: number }) => {
+      const end = Math.min(4000, query.offset + query.limit)
+      return Promise.resolve(ok(result(Array.from({ length: end - query.offset }, (_, index) => `plugin-${query.offset + index}`), 10, end < 4000 ? end : null)))
+    })
+
+    await controller.load('https://example.test/index.json', { ...INITIAL_QUERY, installation: 'installed' })
+
+    expect(search).toHaveBeenCalledTimes(40)
+    expect(controller.getSnapshot().listing?.value?.entries).toHaveLength(4000)
     expect(controller.getSnapshot().listing?.value?.nextOffset).toBeNull()
   })
 

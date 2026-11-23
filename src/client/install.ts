@@ -21,6 +21,17 @@ export function requestInstall(
   return true
 }
 
+export function requestUpdate(
+  update: PluginTabProps['update'],
+  entry: MarketEntry,
+  version: MarketVersion,
+): boolean {
+  if (!version.update || version.source.type !== 'git' || entry.installation.status === 'not-installed' || entry.installation.status === 'provided'
+    || !versionInstallable(version)) return false
+  update({ packageName: entry.name, version: version.version, spec: version.install.spec })
+  return true
+}
+
 export function sourceLabel(name: string, version: MarketVersion): string {
   if (version.source.type === 'npm') return version.source.registry === undefined
     ? `npm · ${name}@${version.version}`

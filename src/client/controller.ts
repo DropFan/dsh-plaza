@@ -78,7 +78,14 @@ export class PlazaController {
     const answer = await this.remote.pluginMarket.listIndexes()
     if (!this.current(read, this.indexesRead)) return null
     if (!answer.ok) { this.patch({ indexesStatus: 'error' }); return null }
-    this.patch({ indexesStatus: 'ready', indexes: answer.value })
+    const listing = this.state.listing
+    const removedListing = listing !== null && !answer.value.some((index: MarketIndexSummary) => index.url === listing.url)
+    if (removedListing) this.listingRead++
+    this.patch({
+      indexesStatus: 'ready',
+      indexes: answer.value,
+      ...(removedListing ? { listing: null } : {}),
+    })
     return answer.value
   }
 
